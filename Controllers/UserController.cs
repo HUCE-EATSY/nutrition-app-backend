@@ -64,4 +64,18 @@ public class UserController : ControllerBase
 
         return Ok(ApiResponse<UserGoalUpdateResponse>.Success(result, "Cập nhật mục tiêu thành công"));
     }
+
+    [HttpGet("info")]
+    public async Task<IActionResult> GetUserInfo()
+    {
+        Guid userId = User.GetUserId();
+        var result = await _userService.GetUserInfoAsync(userId);
+
+        if (result == null)
+        {
+            return NotFound(ApiResponse<object>.Fail("Không tìm thấy thông tin người dùng.", "404"));
+        }
+
+        return Ok(ApiResponse<GetUserInfoResponse>.Success(result, "Lấy thông tin thành công"));
+    }
 }

@@ -149,4 +149,22 @@ public class UserService : IUserService
 
         return _mapper.Map<UserGoalUpdateResponse>(goal);
     }
+
+    public async Task<GetUserInfoResponse?> GetUserInfoAsync(Guid userId)
+    {
+        var user = await _dbContext.Users.FindAsync(userId);
+        if (user == null) return null;
+
+        var profile = await _dbContext.UserProfiles.FindAsync(userId);
+        var activeGoal = _dbContext.UserGoals.FirstOrDefault(x => x.UserId == userId && x.IsActive);
+
+        return new GetUserInfoResponse
+        {
+            UserId = user.Id,
+            Profile = profile != null ? _mapper.Map<UserProfileResponse>(profile) : null,
+            ActiveGoal = activeGoal != null ? _mapper.Map<UserGoalResponse>(activeGoal) : null,
+            CreatedAt = user.CreatedAt,
+            UpdatedAt = user.UpdatedAt
+        };
+    }
 }
