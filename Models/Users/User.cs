@@ -12,4 +12,5 @@ public class User
     public ICollection<UserAuthProvider> AuthProviders { get; set; } = new List<UserAuthProvider>();
     public UserProfile? Profile { get; set; }
     public ICollection<UserGoal> Goals { get; set; } = new List<UserGoal>();
+    public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
 }

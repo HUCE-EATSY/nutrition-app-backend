@@ -11,6 +11,7 @@ public class WaoDbContext : DbContext
     public DbSet<UserAuthProvider> UserAuthProviders { get; set; }
     public DbSet<UserProfile> UserProfiles { get; set; }
     public DbSet<UserGoal> UserGoals { get; set; }
+    public DbSet<RefreshToken> RefreshTokens { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -83,6 +84,22 @@ public class WaoDbContext : DbContext
 
             entity.HasOne(d => d.User)
                   .WithMany(p => p.Goals)
+                  .HasForeignKey(d => d.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // --- Cấu hình bảng RefreshTokens ---
+        modelBuilder.Entity<RefreshToken>(entity =>
+        {
+            entity.ToTable("refresh_tokens");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnType("CHAR(36)");
+            entity.Property(e => e.UserId).HasColumnType("CHAR(36)");
+            entity.Property(e => e.HashedToken).HasMaxLength(500);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+            
+            entity.HasOne(d => d.User)
+                  .WithMany(p => p.RefreshTokens)
                   .HasForeignKey(d => d.UserId)
                   .OnDelete(DeleteBehavior.Cascade);
         });

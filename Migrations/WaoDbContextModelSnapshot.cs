@@ -22,6 +22,38 @@ namespace nutrition_app_backend.Migrations
 
             MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
 
+            modelBuilder.Entity("nutrition_app_backend.Models.Users.RefreshToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("CHAR(36)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime(6)")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("HashedToken")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("CHAR(36)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("refresh_tokens", (string)null);
+                });
+
             modelBuilder.Entity("nutrition_app_backend.Models.Users.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -177,6 +209,17 @@ namespace nutrition_app_backend.Migrations
                     b.ToTable("user_profiles", (string)null);
                 });
 
+            modelBuilder.Entity("nutrition_app_backend.Models.Users.RefreshToken", b =>
+                {
+                    b.HasOne("nutrition_app_backend.Models.Users.User", "User")
+                        .WithMany("RefreshTokens")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("nutrition_app_backend.Models.Users.UserAuthProvider", b =>
                 {
                     b.HasOne("nutrition_app_backend.Models.Users.User", "User")
@@ -217,6 +260,8 @@ namespace nutrition_app_backend.Migrations
                     b.Navigation("Goals");
 
                     b.Navigation("Profile");
+
+                    b.Navigation("RefreshTokens");
                 });
 #pragma warning restore 612, 618
         }
