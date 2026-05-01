@@ -19,12 +19,86 @@ Use this workflow when asked to add a **new domain endpoint** (e.g., "add a Meal
 Before writing any code, state this plan and confirm with the user if the feature name is ambiguous.
 
 ```
+0. Decide: record vs class for each DTO (see decision table below)
 1. Identify feature name (e.g., "Meal")
 2. Create DTOs → verify: files exist in DTOs/{Feature}/
 3. Create Service interface + implementation → verify: files exist in Services/{Feature}/
 4. Register service in Program.cs → verify: AddScoped<> line added
 5. Create Controller → verify: file exists in Controllers/
 6. (Optional) Create EF Entity + add to DbContext → verify: migration needed?
+```
+
+---
+
+## Step 0: Decide — `record` vs `class` for DTOs
+
+Apply this decision **before writing any DTO**. The wrong choice here is hard to refactor later.
+
+### Decision Table
+
+| Situation | Use |
+|-----------|-----|
+| **Response DTO** — data flowing *out* to the mobile client | ✅ `record` |
+| **Simple request DTO** — just flat properties, no validation attributes | ✅ `record` |
+| **Request DTO with `[Required]`, `[Range]`, `[MaxLength]`** etc. | ⚠️ `class` |
+| **Request DTO with nested mutable objects** (e.g., `List<ItemRequest>`) | ⚠️ `class` |
+| **DTO that AutoMapper maps *into* using `ForMember`** | ⚠️ `class` |
+| **Paginated wrapper** (`PagedResponse<T>`, `PagedRequest`) | ✅ `class` (has computed property + mutable list) |
+
+### Why this rule?
+
+- `record` gives you **immutability** (`init`-only setters), **value equality**, and terser syntax — ideal for response payloads that are created once and sent.
+- `class` is needed when ASP.NET model binding or AutoMapper needs to **set properties after construction**, or when DataAnnotation validators are involved.
+- Both serialize identically with `System.Text.Json` — the mobile client sees no difference.
+
+### Syntax reference
+
+```csharp
+// ✅ record — Response DTO (immutable, value equality)
+public record MealResponse(
+    Guid Id,
+    string Name,
+    int CaloriesKcal,
+    DateTime CreatedAt
+);
+
+// ✅ record — Simple request DTO (no validation attributes)
+public record CreateMealRequest(
+    string Name,
+    int CaloriesKcal
+);
+
+// ⚠️ class — Request DTO with validation attributes
+public class UpdateProfileRequest
+{
+    [Required]
+    [MaxLength(100)]
+    public string DisplayName { get; set; } = string.Empty;
+
+    [Range(1, 300)]
+    public int? HeightCm { get; set; }
+}
+
+// ⚠️ class — Request DTO with nested list
+public class LogMealRequest
+{
+    public DateTime LoggedAt { get; set; }
+    public List<MealItemRequest> Items { get; set; } = [];
+}
+```
+
+### AutoMapper note
+
+AutoMapper 12 (used in this project) supports both `record` and `class`. However, when mapping **into** a `record`, AutoMapper uses the constructor — so the constructor parameter names must match the source property names exactly (case-insensitive).
+
+```csharp
+// ✅ Works — constructor params match source properties
+public record MealResponse(Guid Id, string Name);
+CreateMap<Meal, MealResponse>(); // no ForMember needed
+
+// ❌ Fails — ForMember cannot target init-only record properties
+CreateMap<Meal, MealResponse>()
+    .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Title)); // use class instead
 ```
 
 ---
@@ -37,16 +111,25 @@ Replace `{Feature}` with the actual feature name (e.g., `Meal`, `NutritionLog`).
 
 ### Step 1: DTOs — `DTOs/{Feature}/`
 
-**`{Feature}Request.cs`** — Input DTO
+**Apply Step 0 first** to decide `record` vs `class` before writing these files.
+
+**`Create{Feature}Request.cs`** — Input DTO
 
 ```csharp
 namespace nutrition_app_backend.DTOs.{Feature};
 
-public class Create{Feature}Request
-{
-    public string Name { get; set; } = string.Empty;
+// ✅ Use record if no validation attributes and no nested mutable lists
+public record Create{Feature}Request(
+    string Name
     // TODO: add fields specific to this feature
-}
+);
+
+// ⚠️ Use class instead if you need [Required], [Range], etc.
+// public class Create{Feature}Request
+// {
+//     [Required] [MaxLength(100)]
+//     public string Name { get; set; } = string.Empty;
+// }
 ```
 
 **`{Feature}Response.cs`** — Output DTO
@@ -54,12 +137,13 @@ public class Create{Feature}Request
 ```csharp
 namespace nutrition_app_backend.DTOs.{Feature};
 
-public class {Feature}Response
-{
-    public Guid Id { get; set; }
-    public string Name { get; set; } = string.Empty;
+// ✅ Always record for responses — immutable, concise, value equality
+public record {Feature}Response(
+    Guid Id,
+    string Name,
+    DateTime CreatedAt
     // TODO: add fields specific to this feature
-}
+);
 ```
 
 ---
@@ -229,11 +313,13 @@ public class {Feature}Controller : ControllerBase
 
 After scaffolding, confirm:
 
-- [ ] `DTOs/{Feature}/Create{Feature}Request.cs` exists
-- [ ] `DTOs/{Feature}/{Feature}Response.cs` exists
+- [ ] **Step 0 decision documented** — stated why each DTO is `record` or `class`
+- [ ] `DTOs/{Feature}/Create{Feature}Request.cs` exists (`record` or `class` per Step 0)
+- [ ] `DTOs/{Feature}/{Feature}Response.cs` exists (should be `record`)
 - [ ] `Services/{Feature}/I{Feature}Service.cs` exists
 - [ ] `Services/{Feature}/{Feature}Service.cs` exists
 - [ ] `Program.cs` has `AddScoped<I{Feature}Service, {Feature}Service>()`
 - [ ] `Controllers/{Feature}Controller.cs` exists
-- [ ] No `[NotImplementedException]` left in final code
+- [ ] AutoMapper profile added in `Mappings/` if `ForMember` is needed
+- [ ] No `NotImplementedException` left in final code
 - [ ] Build passes: `dotnet build`
