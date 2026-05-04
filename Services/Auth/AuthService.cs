@@ -2,6 +2,7 @@ using Google.Apis.Auth;
 using Microsoft.EntityFrameworkCore;
 using nutrition_app_backend.Data;
 using nutrition_app_backend.DTOs.Auth;
+using nutrition_app_backend.Exceptions;
 using nutrition_app_backend.Models.Users;
 using nutrition_app_backend.Services.Token;
 
@@ -21,7 +22,7 @@ public class AuthService : IAuthService
         _tokenService = tokenService;
     }
 
-    public async Task<AuthResponse?> LoginWithGoogleAsync(GoogleLoginRequest request)
+    public async Task<AuthResponse> LoginWithGoogleAsync(GoogleLoginRequest request)
     {
         GoogleJsonWebSignature.Payload payload;
         try
@@ -39,8 +40,7 @@ public class AuthService : IAuthService
         }
         catch (Exception ex)
         {
-            Console.WriteLine(ex.ToString());
-            return null;
+            throw new BusinessException("INVALID_GOOGLE_TOKEN", "Invalid Google token.", ex);
         }
 
         string providerUid = payload.Subject; // Mã định danh duy nhất của user từ Google

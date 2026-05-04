@@ -1,16 +1,35 @@
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using nutrition_app_backend.Data;
+using nutrition_app_backend.Exceptions;
 using nutrition_app_backend.Services.Auth;
 using nutrition_app_backend.Services.Token;
 using nutrition_app_backend.Services.User;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .ConfigureApiBehaviorOptions(options =>
+    {
+        options.InvalidModelStateResponseFactory = context =>
+        {
+            var problemDetails = new ValidationProblemDetails(context.ModelState)
+            {
+                Title = "Request failed",
+                Status = StatusCodes.Status400BadRequest,
+                Detail = "Validation failed.",
+                Instance = context.HttpContext.Request.Path.ToString()
+            };
+
+            return new BadRequestObjectResult(problemDetails);
+        };
+    });
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll",
@@ -70,11 +89,14 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             {
                 context.HandleResponse();
                 context.Response.StatusCode = 401;
-                context.Response.ContentType = "application/json";
 
-                return context.Response.WriteAsync(
-                    "{\"message\":\"Unauthorized - Missing token\"}"
-                );
+                return context.Response.WriteAsJsonAsync(new ProblemDetails
+                {
+                    Title = "Request failed",
+                    Status = StatusCodes.Status401Unauthorized,
+                    Detail = "Unauthorized",
+                    Instance = context.Request.Path.ToString()
+                });
             },
 
             // ❌ Token sai / expired / signature fail
@@ -82,11 +104,27 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             {
                 context.NoResult();
                 context.Response.StatusCode = 401;
-                context.Response.ContentType = "application/json";
 
-                return context.Response.WriteAsync(
-                    "{\"message\":\"Invalid JWT token\"}"
-                );
+                return context.Response.WriteAsJsonAsync(new ProblemDetails
+                {
+                    Title = "Request failed",
+                    Status = StatusCodes.Status401Unauthorized,
+                    Detail = "Unauthorized",
+                    Instance = context.Request.Path.ToString()
+                });
+            },
+
+            OnForbidden = context =>
+            {
+                context.Response.StatusCode = 403;
+
+                return context.Response.WriteAsJsonAsync(new ProblemDetails
+                {
+                    Title = "Request failed",
+                    Status = StatusCodes.Status403Forbidden,
+                    Detail = "Forbidden",
+                    Instance = context.Request.Path.ToString()
+                });
             }
         };
     });
@@ -135,6 +173,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseExceptionHandler();
 app.UseHttpsRedirection();
 app.UseCors("AllowAll");
 app.UseAuthentication();
@@ -147,7 +186,13 @@ app.MapGet("/api/health/db", async (WaoDbContext dbContext) =>
     var canConnect = await dbContext.Database.CanConnectAsync();
     return canConnect
         ? Results.Ok("Database connection successful!")
-        : Results.StatusCode(500);
+        : Results.Problem(
+            title: "Request failed",
+            detail: app.Environment.IsDevelopment()
+                ? "Database connection failed."
+                : "Unexpected error occurred",
+            statusCode: StatusCodes.Status500InternalServerError,
+            instance: "/api/health/db");
 });
 
 app.Run();

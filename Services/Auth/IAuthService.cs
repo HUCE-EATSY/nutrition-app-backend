@@ -4,5 +4,5 @@ namespace nutrition_app_backend.Services.Auth;
 
 public interface IAuthService
 {
-    Task<AuthResponse?> LoginWithGoogleAsync(GoogleLoginRequest request);
+    Task<AuthResponse> LoginWithGoogleAsync(GoogleLoginRequest request);
 }
