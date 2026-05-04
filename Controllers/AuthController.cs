@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
 using nutrition_app_backend.DTOs;
 using nutrition_app_backend.DTOs.Auth;
@@ -27,30 +26,16 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> LoginWithGoogle([FromBody] GoogleLoginRequest request)
     {
         var result = await _authService.LoginWithGoogleAsync(request);
-        
-        if (result == null)
-        {
-            var errorResponse = ApiResponse<object>.Fail("Token Google không hợp lệ hoặc đã hết hạn.", "401");
-            return Unauthorized(errorResponse);
-        }
 
-        var successResponse = ApiResponse<AuthResponse>.Success(result, "Đăng nhập thành công");
-        return Ok(successResponse); 
+        return Ok(ApiResponse<AuthResponse>.Success(result, "Đăng nhập thành công"));
     }
-    
+
     [HttpPost("refresh")]
     public async Task<IActionResult> Refresh([FromBody] RefreshRequest request)
     {
         var result = await _tokenService.RefreshAsync(request.RefreshToken);
-        if (result == null)
-        {
-            var errorResponse = ApiResponse<object>
-                .Fail("Refresh token không hợp lệ hoặc đã hết hạn.", "401");
 
-            return Unauthorized(errorResponse);
-        }
-        return Ok(ApiResponse<AuthResponse>
-            .Success(result, "Làm mới token thành công"));
+        return Ok(ApiResponse<AuthResponse>.Success(result, "Làm mới token thành công"));
     }
 
     [HttpPost("logout")]
@@ -58,7 +43,6 @@ public class AuthController : ControllerBase
     {
         await _tokenService.RevokeAsync(request.RefreshToken);
 
-        return Ok(ApiResponse<object>
-            .Success(null, "Đăng xuất thành công"));
+        return Ok(ApiResponse<object>.Success(null, "Đăng xuất thành công"));
     }
 }

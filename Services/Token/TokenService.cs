@@ -10,6 +10,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using nutrition_app_backend.Exceptions;
 
 public class TokenService : ITokenService
 {
@@ -40,7 +41,7 @@ public class TokenService : ITokenService
 
     // ================= REFRESH =================
 
-    public async Task<AuthResponse?> RefreshAsync(string refreshToken)
+    public async Task<AuthResponse> RefreshAsync(string refreshToken)
     {
         var hash = HashToken(refreshToken);
 
@@ -49,7 +50,7 @@ public class TokenService : ITokenService
             .FirstOrDefaultAsync(r => r.HashedToken == hash);
 
         if (stored == null || !stored.IsValid)
-            return null;
+            throw new BusinessException("INVALID_REFRESH_TOKEN", "Invalid or expired refresh token.");
 
         // revoke old token
         stored.RevokedAt = DateTime.UtcNow;
@@ -169,7 +170,7 @@ public class TokenService : ITokenService
             .FirstOrDefaultAsync();
 
         if (string.IsNullOrEmpty(email))
-            throw new Exception("Email not found for user");
+            throw new NotFoundException("Email not found for user.");
 
         return email;
     }

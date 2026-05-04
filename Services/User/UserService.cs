@@ -2,6 +2,7 @@ using AutoMapper;
 using nutrition_app_backend.Data;
 using nutrition_app_backend.DTOs.Users;
 using nutrition_app_backend.Enums;
+using nutrition_app_backend.Exceptions;
 using nutrition_app_backend.Models.Users;
 
 namespace nutrition_app_backend.Services.User;
@@ -17,17 +18,18 @@ public class UserService : IUserService
         _mapper = mapper;
     }
 
-    public async Task<UserGoalResponse?> OnboardUserAsync(Guid userId, OnboardingRequest request)
+    public async Task<UserGoalResponse> OnboardUserAsync(Guid userId, OnboardingRequest request)
     {
         var user = await _dbContext.Users.FindAsync(userId);
-        if (user == null) return null;
+        if (user == null)
+            throw new NotFoundException("User not found.");
         
         var existingProfile = _dbContext.UserProfiles
             .FirstOrDefault(x => x.UserId == userId);
 
         if (existingProfile != null)
         {
-            throw new Exception("User already onboarded");
+            throw new BusinessException("USER_ALREADY_ONBOARDED", "User already onboarded.");
         }
         
         var profile = new UserProfile
@@ -52,7 +54,7 @@ public class UserService : IUserService
                 bmr -= 161;
                 break;
             default:
-                throw new ArgumentException("Invalid gender for BMR calculation");
+                throw new BusinessException("INVALID_GENDER", "Invalid gender for BMR calculation.");
         } 
 
         decimal[] activityMultipliers = { 0, 1.2m, 1.375m, 1.55m, 1.725m, 1.9m };
@@ -80,13 +82,15 @@ public class UserService : IUserService
         return _mapper.Map<UserGoalResponse>(goal);
     }
 
-    public async Task<UserProfileResponse?> UpdateUserProfileAsync(Guid userId, UpdateProfileRequest request)
+    public async Task<UserProfileResponse> UpdateUserProfileAsync(Guid userId, UpdateProfileRequest request)
     {
         var user = await _dbContext.Users.FindAsync(userId);
-        if (user == null) return null;
+        if (user == null)
+            throw new NotFoundException("User not found.");
 
         var profile = await _dbContext.UserProfiles.FindAsync(userId);
-        if (profile == null) return null;
+        if (profile == null)
+            throw new NotFoundException("User profile not found.");
 
         // 1. CẬP NHẬT PROFILE
         profile.Gender = request.Gender;
@@ -110,7 +114,7 @@ public class UserService : IUserService
                     bmr -= 161;
                     break;
                 default:
-                    throw new ArgumentException("Invalid gender for BMR calculation");
+                    throw new BusinessException("INVALID_GENDER", "Invalid gender for BMR calculation.");
             }
 
             decimal[] activityMultipliers = { 0, 1.2m, 1.375m, 1.55m, 1.725m, 1.9m };
@@ -132,10 +136,11 @@ public class UserService : IUserService
         return _mapper.Map<UserProfileResponse>(profile);
     }
 
-    public async Task<UserGoalUpdateResponse?> UpdateUserGoalAsync(Guid userId, UpdateUserGoalRequest request)
+    public async Task<UserGoalUpdateResponse> UpdateUserGoalAsync(Guid userId, UpdateUserGoalRequest request)
     {
         var goal = _dbContext.UserGoals.FirstOrDefault(x => x.UserId == userId && x.IsActive);
-        if (goal == null) return null;
+        if (goal == null)
+            throw new NotFoundException("User goal not found.");
 
         // Cập nhật goal
         goal.GoalType = request.GoalType;
@@ -150,10 +155,11 @@ public class UserService : IUserService
         return _mapper.Map<UserGoalUpdateResponse>(goal);
     }
 
-    public async Task<GetUserInfoResponse?> GetUserInfoAsync(Guid userId)
+    public async Task<GetUserInfoResponse> GetUserInfoAsync(Guid userId)
     {
         var user = await _dbContext.Users.FindAsync(userId);
-        if (user == null) return null;
+        if (user == null)
+            throw new NotFoundException("User not found.");
 
         var profile = await _dbContext.UserProfiles.FindAsync(userId);
         var activeGoal = _dbContext.UserGoals.FirstOrDefault(x => x.UserId == userId && x.IsActive);
