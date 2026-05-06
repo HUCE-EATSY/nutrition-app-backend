@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using nutrition_app_backend.Models.Foods;
 using nutrition_app_backend.Models.Users;
 
 namespace nutrition_app_backend.Data;
@@ -12,6 +13,7 @@ public class WaoDbContext : DbContext
     public DbSet<UserProfile> UserProfiles { get; set; }
     public DbSet<UserGoal> UserGoals { get; set; }
     public DbSet<RefreshToken> RefreshTokens { get; set; }
+    public DbSet<Food> Foods { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -86,6 +88,23 @@ public class WaoDbContext : DbContext
                   .WithMany(p => p.Goals)
                   .HasForeignKey(d => d.UserId)
                   .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // --- Cấu hình bảng Foods ---
+        modelBuilder.Entity<Food>(entity =>
+        {
+            entity.ToTable("foods");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnType("CHAR(36)");
+            entity.Property(e => e.Name).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.ImageUrl).HasMaxLength(500);
+            entity.Property(e => e.CaloriesPer100g).HasPrecision(7, 2);
+            entity.Property(e => e.ProteinPer100g).HasPrecision(6, 2);
+            entity.Property(e => e.CarbPer100g).HasPrecision(6, 2);
+            entity.Property(e => e.FatPer100g).HasPrecision(6, 2);
+            entity.Property(e => e.CreatedByUserId).HasColumnType("CHAR(36)");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)");
         });
 
         // --- Cấu hình bảng RefreshTokens ---

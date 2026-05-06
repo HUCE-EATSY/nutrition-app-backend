@@ -7,6 +7,7 @@ using Microsoft.OpenApi.Models;
 using nutrition_app_backend.Data;
 using nutrition_app_backend.Exceptions;
 using nutrition_app_backend.Services.Auth;
+using nutrition_app_backend.Services.Food;
 using nutrition_app_backend.Services.Token;
 using nutrition_app_backend.Services.User;
 
@@ -55,6 +56,7 @@ builder.Services.AddDbContext<WaoDbContext>(options =>
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<IFoodService, FoodService>();
 
 // =====================
 // AUTOMAPPER
