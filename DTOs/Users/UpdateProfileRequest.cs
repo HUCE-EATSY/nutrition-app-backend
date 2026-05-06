@@ -4,6 +4,12 @@ using nutrition_app_backend.Enums;
 namespace nutrition_app_backend.DTOs.Users;
 
 public record UpdateProfileRequest(
+    [MaxLength(100)]
+    string? DisplayName,
+    
+    [MaxLength(500)]
+    string? AvatarUrl,
+
     Gender Gender,
     DateOnly DateOfBirth,
     

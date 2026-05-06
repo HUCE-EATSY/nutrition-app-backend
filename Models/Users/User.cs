@@ -1,3 +1,6 @@
+using nutrition_app_backend.Models.Diaries;
+using nutrition_app_backend.Models.Foods;
+
 namespace nutrition_app_backend.Models.Users;
 
 public class User
@@ -13,4 +16,8 @@ public class User
     public UserProfile? Profile { get; set; }
     public ICollection<UserGoal> Goals { get; set; } = new List<UserGoal>();
     public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
+
+    public ICollection<WeightLog> WeightLogs { get; set; } = new List<WeightLog>();
+    public ICollection<FoodLog> FoodLogs { get; set; } = new List<FoodLog>();
+    public ICollection<FoodItem> CreatedFoods { get; set; } = new List<FoodItem>();
 }

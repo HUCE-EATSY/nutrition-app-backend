@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using nutrition_app_backend.Models.Users;
+using nutrition_app_backend.Models.Foods;
+using nutrition_app_backend.Models.Diaries;
 
 namespace nutrition_app_backend.Data;
 
@@ -7,17 +9,30 @@ public class WaoDbContext : DbContext
 {
     public WaoDbContext(DbContextOptions<WaoDbContext> options) : base(options) { }
 
-    public DbSet<User> Users { get; set; }
-    public DbSet<UserAuthProvider> UserAuthProviders { get; set; }
-    public DbSet<UserProfile> UserProfiles { get; set; }
-    public DbSet<UserGoal> UserGoals { get; set; }
-    public DbSet<RefreshToken> RefreshTokens { get; set; }
+    // User Group
+    public DbSet<User> Users { get; set; } = null!;
+    public DbSet<UserAuthProvider> UserAuthProviders { get; set; } = null!;
+    public DbSet<UserProfile> UserProfiles { get; set; } = null!;
+    public DbSet<UserGoal> UserGoals { get; set; } = null!;
+    public DbSet<RefreshToken> RefreshTokens { get; set; } = null!;
+    public DbSet<WeightLog> WeightLogs { get; set; } = null!;
+
+    // Food Group
+    public DbSet<FoodCategory> FoodCategories { get; set; } = null!;
+    public DbSet<FoodItem> FoodItems { get; set; } = null!;
+    public DbSet<FoodItemImage> FoodItemImages { get; set; } = null!;
+    public DbSet<FoodNutrition> FoodNutritions { get; set; } = null!;
+    public DbSet<FoodItemComponent> FoodItemComponents { get; set; } = null!;
+
+    // Logging Group
+    public DbSet<MealType> MealTypes { get; set; } = null!;
+    public DbSet<FoodLog> FoodLogs { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
-        // --- Cấu hình bảng Users ---
+        // --- GROUP 1: USER & AUTHENTICATION ---
         modelBuilder.Entity<User>(entity =>
         {
             entity.ToTable("users");
@@ -27,7 +42,6 @@ public class WaoDbContext : DbContext
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)");
         });
 
-        // --- Cấu hình bảng UserAuthProviders ---
         modelBuilder.Entity<UserAuthProvider>(entity =>
         {
             entity.ToTable("user_auth_providers");
@@ -41,16 +55,13 @@ public class WaoDbContext : DbContext
                   .OnDelete(DeleteBehavior.Cascade);
         });
 
-        // --- Cấu hình bảng UserProfiles ---
         modelBuilder.Entity<UserProfile>(entity =>
         {
             entity.ToTable("user_profiles");
             entity.HasKey(e => e.UserId);
             entity.Property(e => e.UserId).HasColumnType("CHAR(36)");
-            entity.Property(e => e.HeightCm)
-                .HasPrecision(5, 2);
-            entity.Property(e => e.WeightKg)
-                .HasPrecision(5, 2);
+            entity.Property(e => e.HeightCm).HasPrecision(5, 2);
+            entity.Property(e => e.WeightKg).HasPrecision(5, 2);
             
             entity.HasOne(d => d.User)
                   .WithOne(p => p.Profile)
@@ -58,29 +69,20 @@ public class WaoDbContext : DbContext
                   .OnDelete(DeleteBehavior.Cascade);
         });
 
-        // --- Cấu hình bảng UserGoals ---
         modelBuilder.Entity<UserGoal>(entity =>
         {
             entity.ToTable("user_goals");
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id).HasColumnType("CHAR(36)");
             entity.Property(e => e.UserId).HasColumnType("CHAR(36)");
-            entity.Property(e => e.WeightKg)
-                .HasPrecision(5, 2);
-            entity.Property(e => e.GoalWeightKg)
-                .HasPrecision(5, 2);
-            entity.Property(e => e.BmrKcal)
-                .HasPrecision(7, 2);
-            entity.Property(e => e.TdeeKcal)
-                .HasPrecision(7, 2);
-            entity.Property(e => e.TargetCalories)
-                .HasPrecision(7, 2);
-            entity.Property(e => e.TargetProteinG)
-                .HasPrecision(6, 2);
-            entity.Property(e => e.TargetCarbsG)
-                .HasPrecision(6, 2);
-            entity.Property(e => e.TargetFatG)
-                .HasPrecision(6, 2);
+            entity.Property(e => e.WeightKg).HasPrecision(5, 2);
+            entity.Property(e => e.GoalWeightKg).HasPrecision(5, 2);
+            entity.Property(e => e.BmrKcal).HasPrecision(7, 2);
+            entity.Property(e => e.TdeeKcal).HasPrecision(7, 2);
+            entity.Property(e => e.TargetCalories).HasPrecision(7, 2);
+            entity.Property(e => e.TargetProteinG).HasPrecision(6, 2);
+            entity.Property(e => e.TargetCarbsG).HasPrecision(6, 2);
+            entity.Property(e => e.TargetFatG).HasPrecision(6, 2);
 
             entity.HasOne(d => d.User)
                   .WithMany(p => p.Goals)
@@ -88,7 +90,21 @@ public class WaoDbContext : DbContext
                   .OnDelete(DeleteBehavior.Cascade);
         });
 
-        // --- Cấu hình bảng RefreshTokens ---
+        modelBuilder.Entity<WeightLog>(entity =>
+        {
+            entity.ToTable("weight_logs");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UserId).HasColumnType("CHAR(36)");
+            entity.Property(e => e.WeightKg).HasPrecision(5, 2);
+            // Chỉ cần 1 Index Unique là đủ cho cả query và tính duy nhất
+            entity.HasIndex(e => new { e.UserId, e.LogDate }).IsUnique().HasDatabaseName("idx_weight_user_date");
+
+            entity.HasOne(d => d.User)
+                  .WithMany(p => p.WeightLogs)
+                  .HasForeignKey(d => d.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
         modelBuilder.Entity<RefreshToken>(entity =>
         {
             entity.ToTable("refresh_tokens");
@@ -103,5 +119,158 @@ public class WaoDbContext : DbContext
                   .HasForeignKey(d => d.UserId)
                   .OnDelete(DeleteBehavior.Cascade);
         });
+
+        // --- GROUP 2: FOOD DATABASE ---
+        modelBuilder.Entity<FoodCategory>(entity =>
+        {
+            entity.ToTable("food_categories");
+            entity.HasKey(e => e.Id);
+        });
+
+        modelBuilder.Entity<FoodItem>(entity =>
+        {
+            entity.ToTable("food_items");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnType("CHAR(36)");
+            entity.Property(e => e.ParentId).HasColumnType("CHAR(36)");
+            entity.Property(e => e.CreatedBy).HasColumnType("CHAR(36)");
+            entity.Property(e => e.ServingSizeG).HasPrecision(8, 2);
+            
+            entity.HasIndex(e => new { e.NameVi, e.NameEn }).IsFullText().HasDatabaseName("idx_food_ft");
+            entity.HasIndex(e => e.ActiveImageId).HasDatabaseName("idx_food_active_image");
+            entity.HasIndex(e => e.Status).HasDatabaseName("idx_food_status");
+            
+            entity.HasOne(d => d.Parent)
+                  .WithMany(p => p.Children)
+                  .HasForeignKey(d => d.ParentId)
+                  .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(d => d.Category)
+                  .WithMany(p => p.FoodItems)
+                  .HasForeignKey(d => d.CategoryId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(d => d.Creator)
+                  .WithMany(p => p.CreatedFoods)
+                  .HasForeignKey(d => d.CreatedBy)
+                  .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(d => d.ActiveImage)
+                  .WithOne()
+                  .HasForeignKey<FoodItem>(d => d.ActiveImageId)
+                  .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<FoodItemImage>(entity =>
+        {
+            entity.ToTable("food_item_images");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.FoodItemId).HasColumnType("CHAR(36)");
+            entity.HasIndex(e => e.FoodItemId).HasDatabaseName("idx_img_food");
+
+            entity.HasOne(d => d.FoodItem)
+                  .WithMany(p => p.Images)
+                  .HasForeignKey(d => d.FoodItemId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<FoodNutrition>(entity =>
+        {
+            entity.ToTable("food_nutrition");
+            entity.HasKey(e => e.FoodItemId);
+            entity.Property(e => e.FoodItemId).HasColumnType("CHAR(36)");
+            entity.Property(e => e.CaloriesKcal).HasPrecision(8, 2);
+            entity.Property(e => e.ProteinG).HasPrecision(7, 2);
+            entity.Property(e => e.CarbsG).HasPrecision(7, 2);
+            entity.Property(e => e.FatG).HasPrecision(7, 2);
+            entity.Property(e => e.FiberG).HasPrecision(7, 2);
+            entity.Property(e => e.SugarG).HasPrecision(7, 2);
+            entity.Property(e => e.SodiumMg).HasPrecision(8, 2);
+
+            entity.HasOne(d => d.FoodItem)
+                  .WithOne(p => p.Nutrition)
+                  .HasForeignKey<FoodNutrition>(d => d.FoodItemId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<FoodItemComponent>(entity =>
+        {
+            entity.ToTable("food_item_components");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.ParentFoodId).HasColumnType("CHAR(36)");
+            entity.Property(e => e.ChildFoodId).HasColumnType("CHAR(36)");
+            entity.Property(e => e.QuantityG).HasPrecision(8, 2);
+            entity.HasIndex(e => new { e.ParentFoodId, e.ChildFoodId }).IsUnique();
+
+            entity.HasOne(d => d.ParentFood)
+                  .WithMany(p => p.ComponentsAsParent)
+                  .HasForeignKey(d => d.ParentFoodId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(d => d.ChildFood)
+                  .WithMany(p => p.ComponentsAsChild)
+                  .HasForeignKey(d => d.ChildFoodId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // --- GROUP 3: FOOD LOGGING ---
+        modelBuilder.Entity<MealType>(entity =>
+        {
+            entity.ToTable("meal_types");
+            entity.HasKey(e => e.Id);
+        });
+
+        modelBuilder.Entity<FoodLog>(entity =>
+        {
+            entity.ToTable("food_logs");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UserId).HasColumnType("CHAR(36)");
+            entity.Property(e => e.FoodItemId).HasColumnType("CHAR(36)");
+            entity.Property(e => e.QuantityG).HasPrecision(8, 2);
+            entity.Property(e => e.CaloriesKcal).HasPrecision(8, 2);
+            entity.Property(e => e.ProteinG).HasPrecision(7, 2);
+            entity.Property(e => e.CarbsG).HasPrecision(7, 2);
+            entity.Property(e => e.FatG).HasPrecision(7, 2);
+
+            entity.HasOne(d => d.User)
+                  .WithMany(p => p.FoodLogs)
+                  .HasForeignKey(d => d.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            // Chỉ dùng 1 index phức hợp duy nhất bắt đầu bằng UserId để vừa hỗ trợ query vừa hỗ trợ Foreign Key
+            entity.HasIndex(e => new { e.UserId, e.LogDate })
+                  .HasDatabaseName("idx_logs_user_date");
+
+            entity.HasOne(d => d.FoodItem)
+                  .WithMany(p => p.FoodLogs)
+                  .HasForeignKey(d => d.FoodItemId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(d => d.MealType)
+                  .WithMany(p => p.FoodLogs)
+                  .HasForeignKey(d => d.MealTypeId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // --- SEED DATA ---
+        modelBuilder.Entity<FoodCategory>().HasData(
+            new FoodCategory { Id = 1, NameVi = "Cơm & Xôi", NameEn = "Rice dishes" },
+            new FoodCategory { Id = 2, NameVi = "Phở & Bún", NameEn = "Noodle soups" },
+            new FoodCategory { Id = 3, NameVi = "Bánh mì & Bánh", NameEn = "Bread & Pastries" },
+            new FoodCategory { Id = 4, NameVi = "Đồ uống", NameEn = "Beverages" },
+            new FoodCategory { Id = 5, NameVi = "Thực phẩm đóng gói", NameEn = "Packaged food" },
+            new FoodCategory { Id = 6, NameVi = "Rau củ quả", NameEn = "Vegetables & Fruits" },
+            new FoodCategory { Id = 7, NameVi = "Thịt & Hải sản", NameEn = "Meat & Seafood" },
+            new FoodCategory { Id = 8, NameVi = "Chuỗi F&B", NameEn = "F&B Chains" },
+            new FoodCategory { Id = 9, NameVi = "Quốc tế", NameEn = "International" },
+            new FoodCategory { Id = 10, NameVi = "Khác", NameEn = "Other" }
+        );
+
+        modelBuilder.Entity<MealType>().HasData(
+            new MealType { Id = 1, NameVi = "Bữa sáng" },
+            new MealType { Id = 2, NameVi = "Bữa trưa" },
+            new MealType { Id = 3, NameVi = "Bữa tối" },
+            new MealType { Id = 4, NameVi = "Bữa phụ" }
+        );
     }
 }
