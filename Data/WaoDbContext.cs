@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using nutrition_app_backend.Models.Diary;
 using nutrition_app_backend.Models.Foods;
 using nutrition_app_backend.Models.Users;
 
@@ -14,6 +15,8 @@ public class WaoDbContext : DbContext
     public DbSet<UserGoal> UserGoals { get; set; }
     public DbSet<RefreshToken> RefreshTokens { get; set; }
     public DbSet<Food> Foods { get; set; }
+    public DbSet<DiaryEntry> DiaryEntries { get; set; }
+    public DbSet<ExerciseLog> ExerciseLogs { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -105,6 +108,40 @@ public class WaoDbContext : DbContext
             entity.Property(e => e.CreatedByUserId).HasColumnType("CHAR(36)");
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)");
+        });
+
+        // --- Cấu hình bảng DiaryEntries ---
+        modelBuilder.Entity<DiaryEntry>(entity =>
+        {
+            entity.ToTable("diary_entries");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnType("CHAR(36)");
+            entity.Property(e => e.UserId).HasColumnType("CHAR(36)");
+            entity.Property(e => e.FoodId).HasColumnType("CHAR(36)");
+            entity.Property(e => e.FoodName).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.DateISO).HasMaxLength(10).IsRequired();
+            entity.Property(e => e.QuantityG).HasPrecision(7, 2);
+            entity.Property(e => e.TotalCalories).HasPrecision(7, 2);
+            entity.Property(e => e.ProteinGram).HasPrecision(6, 2);
+            entity.Property(e => e.CarbGram).HasPrecision(6, 2);
+            entity.Property(e => e.FatGram).HasPrecision(6, 2);
+            entity.Property(e => e.LoggedAt).HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+            entity.HasIndex(e => new { e.UserId, e.DateISO });
+        });
+
+        // --- Cấu hình bảng ExerciseLogs ---
+        modelBuilder.Entity<ExerciseLog>(entity =>
+        {
+            entity.ToTable("exercise_logs");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnType("CHAR(36)");
+            entity.Property(e => e.UserId).HasColumnType("CHAR(36)");
+            entity.Property(e => e.ActivityId).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.ActivityLabel).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.DateISO).HasMaxLength(10).IsRequired();
+            entity.Property(e => e.CaloriesBurned).HasPrecision(7, 2);
+            entity.Property(e => e.LoggedAt).HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+            entity.HasIndex(e => new { e.UserId, e.DateISO });
         });
 
         // --- Cấu hình bảng RefreshTokens ---
