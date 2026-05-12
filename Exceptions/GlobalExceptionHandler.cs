@@ -27,6 +27,7 @@ public class GlobalExceptionHandler : IExceptionHandler
         {
             NotFoundException => StatusCodes.Status404NotFound,
             ForbiddenException => StatusCodes.Status403Forbidden,
+            ConflictException => StatusCodes.Status409Conflict,
             BusinessException => StatusCodes.Status400BadRequest,
             _ => StatusCodes.Status500InternalServerError
         };
