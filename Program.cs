@@ -57,8 +57,12 @@ builder.Services.AddDbContext<WaoDbContext>(options =>
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
+<<<<<<< HEAD
 builder.Services.AddScoped<IFoodService, FoodService>();
 builder.Services.AddScoped<IDiaryService, DiaryService>();
+=======
+builder.Services.AddScoped<nutrition_app_backend.Services.Foods.IFoodService, nutrition_app_backend.Services.Foods.FoodService>();
+>>>>>>> feature/phase-2-food-db-and-logging
 
 // =====================
 // AUTOMAPPER

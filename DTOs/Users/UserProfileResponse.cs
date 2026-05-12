@@ -4,6 +4,8 @@ namespace nutrition_app_backend.DTOs.Users;
 
 public record UserProfileResponse(
     Guid UserId,
+    string? DisplayName,
+    string? AvatarUrl,
     Gender Gender,
     DateOnly DateOfBirth,
     decimal HeightCm,
