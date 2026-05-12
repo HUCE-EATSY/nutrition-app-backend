@@ -1,0 +1,115 @@
+### Variables
+@baseUrl = http://localhost:5184/api/v1
+@token = YOUR_JWT_TOKEN_HERE
+
+### Health Check
+GET {{baseUrl}}/../health/db
+
+### ============================================
+### FOOD API TESTS
+### ============================================
+
+### 1. Get All Foods
+GET {{baseUrl}}/Food
+Content-Type: application/json
+
+### 2. Get All Foods with Category Filter
+GET {{baseUrl}}/Food?category=Fruit
+Content-Type: application/json
+
+### 3. Get All Foods with Search
+GET {{baseUrl}}/Food?search=rice
+Content-Type: application/json
+
+### 4. Get Food by ID (Test with ID 2 - Chicken Breast)
+GET {{baseUrl}}/Food/2
+Content-Type: application/json
+
+### 5. Create New Food
+POST {{baseUrl}}/Food
+Content-Type: application/json
+
+{
+  "name": "Cơm trắng",
+  "category": "Grains",
+  "servingSize": 100,
+  "servingUnit": "g",
+  "calories": 130,
+  "protein": 2.7,
+  "carbs": 28.2,
+  "fat": 0.3,
+  "fiber": 0.4,
+  "sugar": 0.1,
+  "sodium": 1,
+  "barcode": null,
+  "imageUrl": null
+}
+
+### 6. Create Another Food (Chicken Breast)
+POST {{baseUrl}}/Food
+Content-Type: application/json
+
+{
+  "name": "Chicken Breast",
+  "category": "Protein",
+  "servingSize": 100,
+  "servingUnit": "g",
+  "calories": 165,
+  "protein": 31,
+  "carbs": 0,
+  "fat": 3.6,
+  "fiber": 0,
+  "sugar": 0,
+  "sodium": 74,
+  "barcode": null,
+  "imageUrl": null
+}
+
+### 7. Create Banana
+POST {{baseUrl}}/Food
+Content-Type: application/json
+
+{
+  "name": "Banana",
+  "category": "Fruit",
+  "servingSize": 100,
+  "servingUnit": "g",
+  "calories": 89,
+  "protein": 1.1,
+  "carbs": 22.8,
+  "fat": 0.3,
+  "fiber": 2.6,
+  "sugar": 12.2,
+  "sodium": 1,
+  "barcode": null,
+  "imageUrl": null
+}
+
+### 8. Update Food (Update Chicken Breast - ID 2)
+PUT {{baseUrl}}/Food/2
+Content-Type: application/json
+
+{
+  "name": "Grilled Chicken Breast (Updated)",
+  "category": "Protein",
+  "calories": 180,
+  "protein": 35,
+  "carbs": 0,
+  "fat": 4.0,
+  "servingSize": 120,
+  "imageUrl": "https://example.com/chicken-grilled.jpg",
+  "description": "Premium grilled chicken breast - high protein"
+}
+
+### 9. Delete Food (Change ID to match your created food)
+DELETE {{baseUrl}}/Food/1
+Content-Type: application/json
+
+### ============================================
+### WITH AUTHENTICATION (if needed later)
+### ============================================
+
+### Get All Foods (Authenticated)
+GET {{baseUrl}}/Food
+Content-Type: application/json
+Authorization: Bearer {{token}}

@@ -18,6 +18,7 @@ public class WaoDbContext : DbContext
     public DbSet<WeightLog> WeightLogs { get; set; } = null!;
 
     // Food Group
+    public DbSet<Food> Foods { get; set; } = null!;
     public DbSet<FoodCategory> FoodCategories { get; set; } = null!;
     public DbSet<FoodItem> FoodItems { get; set; } = null!;
     public DbSet<FoodItemImage> FoodItemImages { get; set; } = null!;
@@ -121,6 +122,27 @@ public class WaoDbContext : DbContext
         });
 
         // --- GROUP 2: FOOD DATABASE ---
+
+        // Flat food table for dataset import & simple API
+        modelBuilder.Entity<Food>(entity =>
+        {
+            entity.ToTable("foods");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedOnAdd();
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Category).HasMaxLength(100);
+            entity.Property(e => e.Calories).HasPrecision(8, 2);
+            entity.Property(e => e.Protein).HasPrecision(7, 2);
+            entity.Property(e => e.Carbs).HasPrecision(7, 2);
+            entity.Property(e => e.Fat).HasPrecision(7, 2);
+            entity.Property(e => e.ServingSize).HasPrecision(7, 2);
+            entity.Property(e => e.ImageUrl).HasMaxLength(500);
+            entity.Property(e => e.Description).HasMaxLength(1000);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+            entity.HasIndex(e => e.Category).HasDatabaseName("idx_food_category");
+            entity.HasIndex(e => e.Name).HasDatabaseName("idx_food_name");
+        });
+
         modelBuilder.Entity<FoodCategory>(entity =>
         {
             entity.ToTable("food_categories");
