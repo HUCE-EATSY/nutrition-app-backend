@@ -7,6 +7,8 @@ using Microsoft.OpenApi.Models;
 using nutrition_app_backend.Data;
 using nutrition_app_backend.Exceptions;
 using nutrition_app_backend.Services.Auth;
+using nutrition_app_backend.Services.Diary;
+using nutrition_app_backend.Services.Food;
 using nutrition_app_backend.Services.Token;
 using nutrition_app_backend.Services.User;
 
@@ -55,6 +57,12 @@ builder.Services.AddDbContext<WaoDbContext>(options =>
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
+<<<<<<< HEAD
+builder.Services.AddScoped<IFoodService, FoodService>();
+builder.Services.AddScoped<IDiaryService, DiaryService>();
+=======
+builder.Services.AddScoped<nutrition_app_backend.Services.Foods.IFoodService, nutrition_app_backend.Services.Foods.FoodService>();
+>>>>>>> feature/phase-2-food-db-and-logging
 
 // =====================
 // AUTOMAPPER

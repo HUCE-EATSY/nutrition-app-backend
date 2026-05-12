@@ -35,6 +35,7 @@ public class UserService : IUserService
         var profile = new UserProfile
         {
             UserId = userId,
+            DisplayName = request.DisplayName,
             Gender = request.Gender,
             DateOfBirth = request.DateOfBirth,
             HeightCm = request.HeightCm,
@@ -93,6 +94,8 @@ public class UserService : IUserService
             throw new NotFoundException("User profile not found.");
 
         // 1. CẬP NHẬT PROFILE
+        profile.DisplayName = request.DisplayName;
+        profile.AvatarUrl = request.AvatarUrl;
         profile.Gender = request.Gender;
         profile.DateOfBirth = request.DateOfBirth;
         profile.HeightCm = request.HeightCm;

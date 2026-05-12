@@ -5,6 +5,8 @@ namespace nutrition_app_backend.Models.Users;
 public class UserProfile
 {
     public Guid UserId { get; set; }
+    public string? DisplayName { get; set; }
+    public string? AvatarUrl { get; set; }
     public Gender Gender { get; set; }
     public DateOnly DateOfBirth { get; set; }
     public decimal HeightCm { get; set; }

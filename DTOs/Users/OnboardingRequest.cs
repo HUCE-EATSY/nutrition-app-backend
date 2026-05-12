@@ -4,6 +4,8 @@ using nutrition_app_backend.Enums;
 namespace nutrition_app_backend.DTOs.Users;
 
 public record OnboardingRequest(
+    [Required, MaxLength(100)]
+    string DisplayName,
     Gender Gender,
     DateOnly DateOfBirth,
     
