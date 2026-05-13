@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using nutrition_app_backend.Data;
 
@@ -11,9 +12,11 @@ using nutrition_app_backend.Data;
 namespace nutrition_app_backend.Migrations
 {
     [DbContext(typeof(WaoDbContext))]
-    partial class WaoDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260512142108_CreateFoodsTable")]
+    partial class CreateFoodsTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -464,160 +467,6 @@ namespace nutrition_app_backend.Migrations
                     b.ToTable("food_nutrition", (string)null);
                 });
 
-            modelBuilder.Entity("nutrition_app_backend.Models.Streaks.StreakFreezeTransaction", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("CHAR(36)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<DateOnly>("ProtectedDate")
-                        .HasColumnType("date");
-
-                    b.Property<int>("Source")
-                        .HasColumnType("int");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("CHAR(36)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId", "ProtectedDate")
-                        .IsUnique()
-                        .HasDatabaseName("idx_freeze_user");
-
-                    b.ToTable("streak_freeze_transactions", (string)null);
-                });
-
-            modelBuilder.Entity("nutrition_app_backend.Models.Streaks.UserStreak", b =>
-                {
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("CHAR(36)");
-
-                    b.Property<int>("CurrentStreak")
-                        .HasColumnType("int");
-
-                    b.Property<int>("FreezeCount")
-                        .HasColumnType("int");
-
-                    b.Property<DateOnly?>("LastLogDate")
-                        .HasColumnType("date");
-
-                    b.Property<int>("LongestStreak")
-                        .HasColumnType("int");
-
-                    b.HasKey("UserId");
-
-                    b.ToTable("user_streaks", (string)null);
-                });
-
-            modelBuilder.Entity("nutrition_app_backend.Models.Subscriptions.Subscription", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("CHAR(36)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<DateTime>("CurrentPeriodEnd")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<int>("PlanId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
-
-                    b.Property<string>("StoreTransactionId")
-                        .HasColumnType("longtext");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("CHAR(36)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("PlanId");
-
-                    b.HasIndex("UserId", "Status")
-                        .HasDatabaseName("idx_sub_user_status");
-
-                    b.ToTable("subscriptions", (string)null);
-                });
-
-            modelBuilder.Entity("nutrition_app_backend.Models.Subscriptions.SubscriptionEvent", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("CHAR(36)");
-
-                    b.Property<string>("EventType")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("RawPayload")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<DateTime>("ReceivedAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<Guid>("SubscriptionId")
-                        .HasColumnType("CHAR(36)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("SubscriptionId", "ReceivedAt")
-                        .HasDatabaseName("idx_sub_event");
-
-                    b.ToTable("subscription_events", (string)null);
-                });
-
-            modelBuilder.Entity("nutrition_app_backend.Models.Subscriptions.SubscriptionPlan", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("DurationDays")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("subscription_plans", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            DurationDays = 0,
-                            Name = "Free"
-                        },
-                        new
-                        {
-                            Id = 2,
-                            DurationDays = 30,
-                            Name = "Premium Monthly"
-                        },
-                        new
-                        {
-                            Id = 3,
-                            DurationDays = 365,
-                            Name = "Premium Yearly"
-                        });
-                });
-
             modelBuilder.Entity("nutrition_app_backend.Models.Users.RefreshToken", b =>
                 {
                     b.Property<Guid>("Id")
@@ -773,8 +622,7 @@ namespace nutrition_app_backend.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId", "IsActive")
-                        .HasDatabaseName("idx_goals_user_active");
+                    b.HasIndex("UserId");
 
                     b.ToTable("user_goals", (string)null);
                 });
@@ -923,58 +771,6 @@ namespace nutrition_app_backend.Migrations
                     b.Navigation("FoodItem");
                 });
 
-            modelBuilder.Entity("nutrition_app_backend.Models.Streaks.StreakFreezeTransaction", b =>
-                {
-                    b.HasOne("nutrition_app_backend.Models.Users.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("nutrition_app_backend.Models.Streaks.UserStreak", b =>
-                {
-                    b.HasOne("nutrition_app_backend.Models.Users.User", "User")
-                        .WithOne()
-                        .HasForeignKey("nutrition_app_backend.Models.Streaks.UserStreak", "UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("nutrition_app_backend.Models.Subscriptions.Subscription", b =>
-                {
-                    b.HasOne("nutrition_app_backend.Models.Subscriptions.SubscriptionPlan", "Plan")
-                        .WithMany("Subscriptions")
-                        .HasForeignKey("PlanId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("nutrition_app_backend.Models.Users.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Plan");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("nutrition_app_backend.Models.Subscriptions.SubscriptionEvent", b =>
-                {
-                    b.HasOne("nutrition_app_backend.Models.Subscriptions.Subscription", "Subscription")
-                        .WithMany("Events")
-                        .HasForeignKey("SubscriptionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Subscription");
-                });
-
             modelBuilder.Entity("nutrition_app_backend.Models.Users.RefreshToken", b =>
                 {
                     b.HasOne("nutrition_app_backend.Models.Users.User", "User")
@@ -1042,16 +838,6 @@ namespace nutrition_app_backend.Migrations
                     b.Navigation("Images");
 
                     b.Navigation("Nutrition");
-                });
-
-            modelBuilder.Entity("nutrition_app_backend.Models.Subscriptions.Subscription", b =>
-                {
-                    b.Navigation("Events");
-                });
-
-            modelBuilder.Entity("nutrition_app_backend.Models.Subscriptions.SubscriptionPlan", b =>
-                {
-                    b.Navigation("Subscriptions");
                 });
 
             modelBuilder.Entity("nutrition_app_backend.Models.Users.User", b =>

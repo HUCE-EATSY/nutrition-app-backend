@@ -7,8 +7,13 @@ using Microsoft.OpenApi.Models;
 using nutrition_app_backend.Data;
 using nutrition_app_backend.Exceptions;
 using nutrition_app_backend.Services.Auth;
+
 using nutrition_app_backend.Services.Token;
 using nutrition_app_backend.Services.User;
+using nutrition_app_backend.Services.Streaks;
+using nutrition_app_backend.Services.Subscriptions;
+using Hangfire;
+using Hangfire.MySql;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -55,6 +60,35 @@ builder.Services.AddDbContext<WaoDbContext>(options =>
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<nutrition_app_backend.Services.Foods.IFoodService, nutrition_app_backend.Services.Foods.FoodService>();
+
+// Phase 3
+builder.Services.AddScoped<IStreakService, StreakService>();
+builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
+
+// Hangfire Config
+builder.Services.AddHangfire(configuration => configuration
+    .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+    .UseSimpleAssemblyNameTypeSerializer()
+    .UseRecommendedSerializerSettings()
+    .UseStorage(
+        new Hangfire.MySql.MySqlStorage(
+            connectionString,
+            new Hangfire.MySql.MySqlStorageOptions
+            {
+                TransactionIsolationLevel = System.Transactions.IsolationLevel.ReadCommitted,
+                QueuePollInterval = TimeSpan.FromSeconds(15),
+                JobExpirationCheckInterval = TimeSpan.FromHours(1),
+                CountersAggregateInterval = TimeSpan.FromMinutes(5),
+                PrepareSchemaIfNecessary = true,
+                DashboardJobListLimit = 50000,
+                TransactionTimeout = TimeSpan.FromMinutes(1),
+                TablesPrefix = "Hangfire"
+            }
+        )
+    )
+);
+builder.Services.AddHangfireServer();
 
 // =====================
 // AUTOMAPPER
@@ -178,7 +212,21 @@ app.UseHttpsRedirection();
 app.UseCors("AllowAll");
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Hangfire Dashboard (in dev mode, or secured in prod)
+if (app.Environment.IsDevelopment())
+{
+    app.UseHangfireDashboard("/hangfire");
+}
+
 app.MapControllers();
+
+// Hangfire Job Registration
+RecurringJob.AddOrUpdate<nutrition_app_backend.Services.BackgroundTasks.StreakCronJob>(
+    "daily-streak-process",
+    job => job.ProcessDailyStreaks(),
+    "59 23 * * *" // 23:59 everyday
+);
 
 // ====== API TEST DB ======
 app.MapGet("/api/health/db", async (WaoDbContext dbContext) =>
