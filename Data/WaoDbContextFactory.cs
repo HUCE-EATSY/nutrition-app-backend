@@ -11,14 +11,20 @@ public class WaoDbContextFactory : IDesignTimeDbContextFactory<WaoDbContext>
 {
     public WaoDbContext CreateDbContext(string[] args)
     {
+        var basePath = Directory.GetCurrentDirectory();
+        
+        var configuration = new Microsoft.Extensions.Configuration.ConfigurationBuilder()
+            .SetBasePath(basePath)
+            .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+            .AddJsonFile($"appsettings.Development.json", optional: true)
+            .Build();
+
+        var connectionString = configuration.GetConnectionString("DefaultConnection");
+
         var optionsBuilder = new DbContextOptionsBuilder<WaoDbContext>();
-
-        // Connection string tạm cho design-time (chỉ cần cú pháp đúng, không cần kết nối thật)
-        var connectionString = "Server=localhost;Port=3306;Database=wao_health_app;User=root;Password=placeholder;";
-
         optionsBuilder.UseMySql(
             connectionString,
-            ServerVersion.Parse("8.0.0-mysql")
+            ServerVersion.AutoDetect(connectionString)
         );
 
         return new WaoDbContext(optionsBuilder.Options);

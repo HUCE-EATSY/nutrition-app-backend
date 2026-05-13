@@ -2,8 +2,9 @@ using Microsoft.EntityFrameworkCore;
 using nutrition_app_backend.Models.Diary;
 using nutrition_app_backend.Models.Foods;
 using nutrition_app_backend.Models.Users;
-using nutrition_app_backend.Models.Foods;
 using nutrition_app_backend.Models.Diaries;
+using nutrition_app_backend.Models.Streaks;
+using nutrition_app_backend.Models.Subscriptions;
 
 namespace nutrition_app_backend.Data;
 
@@ -11,16 +12,6 @@ public class WaoDbContext : DbContext
 {
     public WaoDbContext(DbContextOptions<WaoDbContext> options) : base(options) { }
 
-<<<<<<< HEAD
-    public DbSet<User> Users { get; set; }
-    public DbSet<UserAuthProvider> UserAuthProviders { get; set; }
-    public DbSet<UserProfile> UserProfiles { get; set; }
-    public DbSet<UserGoal> UserGoals { get; set; }
-    public DbSet<RefreshToken> RefreshTokens { get; set; }
-    public DbSet<Food> Foods { get; set; }
-    public DbSet<DiaryEntry> DiaryEntries { get; set; }
-    public DbSet<ExerciseLog> ExerciseLogs { get; set; }
-=======
     // User Group
     public DbSet<User> Users { get; set; } = null!;
     public DbSet<UserAuthProvider> UserAuthProviders { get; set; } = null!;
@@ -40,7 +31,13 @@ public class WaoDbContext : DbContext
     // Logging Group
     public DbSet<MealType> MealTypes { get; set; } = null!;
     public DbSet<FoodLog> FoodLogs { get; set; } = null!;
->>>>>>> feature/phase-2-food-db-and-logging
+
+    // Phase 3: Streaks & Subscriptions
+    public DbSet<UserStreak> UserStreaks { get; set; } = null!;
+    public DbSet<StreakFreezeTransaction> StreakFreezeTransactions { get; set; } = null!;
+    public DbSet<SubscriptionPlan> SubscriptionPlans { get; set; } = null!;
+    public DbSet<Subscription> Subscriptions { get; set; } = null!;
+    public DbSet<SubscriptionEvent> SubscriptionEvents { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -102,69 +99,16 @@ public class WaoDbContext : DbContext
                   .WithMany(p => p.Goals)
                   .HasForeignKey(d => d.UserId)
                   .OnDelete(DeleteBehavior.Cascade);
+            
+            entity.HasIndex(e => new { e.UserId, e.IsActive }).HasDatabaseName("idx_goals_user_active");
         });
 
-<<<<<<< HEAD
-        // --- Cấu hình bảng Foods ---
-        modelBuilder.Entity<Food>(entity =>
-        {
-            entity.ToTable("foods");
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.Id).HasColumnType("CHAR(36)");
-            entity.Property(e => e.Name).HasMaxLength(200).IsRequired();
-            entity.Property(e => e.ImageUrl).HasMaxLength(500);
-            entity.Property(e => e.CaloriesPer100g).HasPrecision(7, 2);
-            entity.Property(e => e.ProteinPer100g).HasPrecision(6, 2);
-            entity.Property(e => e.CarbPer100g).HasPrecision(6, 2);
-            entity.Property(e => e.FatPer100g).HasPrecision(6, 2);
-            entity.Property(e => e.CreatedByUserId).HasColumnType("CHAR(36)");
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
-            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)");
-        });
-
-        // --- Cấu hình bảng DiaryEntries ---
-        modelBuilder.Entity<DiaryEntry>(entity =>
-        {
-            entity.ToTable("diary_entries");
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.Id).HasColumnType("CHAR(36)");
-            entity.Property(e => e.UserId).HasColumnType("CHAR(36)");
-            entity.Property(e => e.FoodId).HasColumnType("CHAR(36)");
-            entity.Property(e => e.FoodName).HasMaxLength(200).IsRequired();
-            entity.Property(e => e.DateISO).HasMaxLength(10).IsRequired();
-            entity.Property(e => e.QuantityG).HasPrecision(7, 2);
-            entity.Property(e => e.TotalCalories).HasPrecision(7, 2);
-            entity.Property(e => e.ProteinGram).HasPrecision(6, 2);
-            entity.Property(e => e.CarbGram).HasPrecision(6, 2);
-            entity.Property(e => e.FatGram).HasPrecision(6, 2);
-            entity.Property(e => e.LoggedAt).HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
-            entity.HasIndex(e => new { e.UserId, e.DateISO });
-        });
-
-        // --- Cấu hình bảng ExerciseLogs ---
-        modelBuilder.Entity<ExerciseLog>(entity =>
-        {
-            entity.ToTable("exercise_logs");
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.Id).HasColumnType("CHAR(36)");
-            entity.Property(e => e.UserId).HasColumnType("CHAR(36)");
-            entity.Property(e => e.ActivityId).HasMaxLength(50).IsRequired();
-            entity.Property(e => e.ActivityLabel).HasMaxLength(100).IsRequired();
-            entity.Property(e => e.DateISO).HasMaxLength(10).IsRequired();
-            entity.Property(e => e.CaloriesBurned).HasPrecision(7, 2);
-            entity.Property(e => e.LoggedAt).HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
-            entity.HasIndex(e => new { e.UserId, e.DateISO });
-        });
-
-        // --- Cấu hình bảng RefreshTokens ---
-=======
         modelBuilder.Entity<WeightLog>(entity =>
         {
             entity.ToTable("weight_logs");
             entity.HasKey(e => e.Id);
             entity.Property(e => e.UserId).HasColumnType("CHAR(36)");
             entity.Property(e => e.WeightKg).HasPrecision(5, 2);
-            // Chỉ cần 1 Index Unique là đủ cho cả query và tính duy nhất
             entity.HasIndex(e => new { e.UserId, e.LogDate }).IsUnique().HasDatabaseName("idx_weight_user_date");
 
             entity.HasOne(d => d.User)
@@ -173,7 +117,6 @@ public class WaoDbContext : DbContext
                   .OnDelete(DeleteBehavior.Cascade);
         });
 
->>>>>>> feature/phase-2-food-db-and-logging
         modelBuilder.Entity<RefreshToken>(entity =>
         {
             entity.ToTable("refresh_tokens");
@@ -190,8 +133,6 @@ public class WaoDbContext : DbContext
         });
 
         // --- GROUP 2: FOOD DATABASE ---
-
-        // Flat food table for dataset import & simple API
         modelBuilder.Entity<Food>(entity =>
         {
             entity.ToTable("foods");
@@ -327,7 +268,6 @@ public class WaoDbContext : DbContext
                   .HasForeignKey(d => d.UserId)
                   .OnDelete(DeleteBehavior.Cascade);
 
-            // Chỉ dùng 1 index phức hợp duy nhất bắt đầu bằng UserId để vừa hỗ trợ query vừa hỗ trợ Foreign Key
             entity.HasIndex(e => new { e.UserId, e.LogDate })
                   .HasDatabaseName("idx_logs_user_date");
 
@@ -340,6 +280,75 @@ public class WaoDbContext : DbContext
                   .WithMany(p => p.FoodLogs)
                   .HasForeignKey(d => d.MealTypeId)
                   .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // --- GROUP 4: PHASE 3 - STREAKS & SUBSCRIPTIONS ---
+        modelBuilder.Entity<UserStreak>(entity =>
+        {
+            entity.ToTable("user_streaks");
+            entity.HasKey(e => e.UserId);
+            entity.Property(e => e.UserId).HasColumnType("CHAR(36)");
+            
+            entity.HasOne(d => d.User)
+                  .WithOne()
+                  .HasForeignKey<UserStreak>(d => d.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<StreakFreezeTransaction>(entity =>
+        {
+            entity.ToTable("streak_freeze_transactions");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnType("CHAR(36)");
+            entity.Property(e => e.UserId).HasColumnType("CHAR(36)");
+            
+            entity.HasIndex(e => new { e.UserId, e.ProtectedDate }).IsUnique().HasDatabaseName("idx_freeze_user");
+
+            entity.HasOne(d => d.User)
+                  .WithMany()
+                  .HasForeignKey(d => d.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<SubscriptionPlan>(entity =>
+        {
+            entity.ToTable("subscription_plans");
+            entity.HasKey(e => e.Id);
+        });
+
+        modelBuilder.Entity<Subscription>(entity =>
+        {
+            entity.ToTable("subscriptions");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnType("CHAR(36)");
+            entity.Property(e => e.UserId).HasColumnType("CHAR(36)");
+            
+            entity.HasIndex(e => new { e.UserId, e.Status }).HasDatabaseName("idx_sub_user_status");
+
+            entity.HasOne(d => d.User)
+                  .WithMany()
+                  .HasForeignKey(d => d.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+            
+            entity.HasOne(d => d.Plan)
+                  .WithMany(p => p.Subscriptions)
+                  .HasForeignKey(d => d.PlanId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<SubscriptionEvent>(entity =>
+        {
+            entity.ToTable("subscription_events");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnType("CHAR(36)");
+            entity.Property(e => e.SubscriptionId).HasColumnType("CHAR(36)");
+            
+            entity.HasIndex(e => new { e.SubscriptionId, e.ReceivedAt }).HasDatabaseName("idx_sub_event");
+
+            entity.HasOne(d => d.Subscription)
+                  .WithMany(p => p.Events)
+                  .HasForeignKey(d => d.SubscriptionId)
+                  .OnDelete(DeleteBehavior.Cascade);
         });
 
         // --- SEED DATA ---
@@ -361,6 +370,12 @@ public class WaoDbContext : DbContext
             new MealType { Id = 2, NameVi = "Bữa trưa" },
             new MealType { Id = 3, NameVi = "Bữa tối" },
             new MealType { Id = 4, NameVi = "Bữa phụ" }
+        );
+
+        modelBuilder.Entity<SubscriptionPlan>().HasData(
+            new SubscriptionPlan { Id = 1, Name = "Free", DurationDays = 0 },
+            new SubscriptionPlan { Id = 2, Name = "Premium Monthly", DurationDays = 30 },
+            new SubscriptionPlan { Id = 3, Name = "Premium Yearly", DurationDays = 365 }
         );
     }
 }
