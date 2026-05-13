@@ -9,6 +9,7 @@ using nutrition_app_backend.Exceptions;
 using nutrition_app_backend.Services.Auth;
 using nutrition_app_backend.Services.Food;
 using nutrition_app_backend.Services.FoodLog;
+using nutrition_app_backend.Services.Storage;
 using nutrition_app_backend.Services.Token;
 using nutrition_app_backend.Services.User;
 using nutrition_app_backend.Services.WeightLog;
@@ -61,6 +62,7 @@ builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IFoodService, FoodService>();
 builder.Services.AddScoped<IFoodLogService, FoodLogService>();
 builder.Services.AddScoped<IWeightLogService, WeightLogService>();
+builder.Services.AddScoped<IStorageService, CloudinaryStorageService>();
 
 // =====================
 // AUTOMAPPER

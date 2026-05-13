@@ -66,10 +66,11 @@ public class FoodsController : ControllerBase
 
     /// <summary>
     /// Create a community food item (source=3, status=0 pending).
-    /// Client must upload image to storage first and send thumbnail_url.
+    /// Gửi dưới dạng multipart/form-data. Ảnh (image) sẽ được backend upload lên Cloudinary.
     /// </summary>
     [HttpPost]
-    public async Task<IActionResult> Create([FromBody] CreateFoodRequest request)
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> Create([FromForm] CreateFoodRequest request)
     {
         Guid userId = User.GetUserId();
         var result = await _foodService.CreateAsync(request, userId);

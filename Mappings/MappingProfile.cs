@@ -25,8 +25,7 @@ public class MappingProfile : Profile
         CreateMap<FoodNutrition, FoodNutritionDto>();
         
         CreateMap<FoodItem, FoodDetailResponse>()
-            .ForMember(dest => dest.ImageUrl, opt => opt.MapFrom(src => 
-                src.Source == 3 ? src.ThumbnailUrl : (src.ActiveImage != null ? src.ActiveImage.StoragePath : null)));
+            .ForMember(dest => dest.ImageUrl, opt => opt.MapFrom<FoodItemImageUrlResolver>());
 
         CreateMap<FoodItemComponent, FoodComponentResponse>()
             .ForMember(dest => dest.ChildFoodNameVi, opt => opt.MapFrom(src => src.ChildFood.NameVi))
@@ -42,8 +41,7 @@ public class MappingProfile : Profile
         CreateMap<FoodLog, FoodLogResponse>()
             .ForMember(dest => dest.FoodNameVi, opt => opt.MapFrom(src => src.FoodItem.NameVi))
             .ForMember(dest => dest.FoodNameEn, opt => opt.MapFrom(src => src.FoodItem.NameEn))
-            .ForMember(dest => dest.ImageUrl, opt => opt.MapFrom(src => 
-                src.FoodItem.Source == 3 ? src.FoodItem.ThumbnailUrl : (src.FoodItem.ActiveImage != null ? src.FoodItem.ActiveImage.StoragePath : null)))
+            .ForMember(dest => dest.ImageUrl, opt => opt.MapFrom<FoodLogImageUrlResolver>())
             .ForMember(dest => dest.MealTypeName, opt => opt.MapFrom(src => src.MealType.NameVi));
 
         CreateMap<WeightLog, WeightLogResponse>();

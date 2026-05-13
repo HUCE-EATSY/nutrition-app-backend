@@ -27,9 +27,9 @@ public class CreateFoodRequest
     [JsonPropertyName("serving_unit_vi")]
     public string ServingUnitVi { get; set; } = "g";
 
-    [MaxLength(500)]
-    [JsonPropertyName("thumbnail_url")]
-    public string? ThumbnailUrl { get; set; }
+    /// Ảnh (tuỳ chọn). Backend sẽ upload lên Cloudinary và tự build URL.
+    [JsonPropertyName("image")]
+    public IFormFile? Image { get; set; }
 
     [JsonPropertyName("barcode")]
     public ulong? Barcode { get; set; }

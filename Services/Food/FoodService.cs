@@ -4,6 +4,7 @@ using nutrition_app_backend.Data;
 using nutrition_app_backend.DTOs.Foods;
 using nutrition_app_backend.Exceptions;
 using nutrition_app_backend.Models.Foods;
+using nutrition_app_backend.Services.Storage;
 using AutoMapper;
 
 namespace nutrition_app_backend.Services.Food;
@@ -12,11 +13,13 @@ public class FoodService : IFoodService
 {
     private readonly WaoDbContext _db;
     private readonly IMapper _mapper;
+    private readonly IStorageService _storage;
 
-    public FoodService(WaoDbContext db, IMapper mapper)
+    public FoodService(WaoDbContext db, IMapper mapper, IStorageService storage)
     {
         _db = db;
         _mapper = mapper;
+        _storage = storage;
     }
 
     /// <summary>
@@ -78,7 +81,8 @@ public class FoodService : IFoodService
                 fi.thumbnail_url     AS ThumbnailUrl,
                 fi.active_image_id   AS ActiveImageId,
                 fn.calories_kcal     AS CaloriesKcal,
-                fii.storage_path     AS ImageStoragePath
+                fii.storage_path     AS ImageStoragePath,
+                fii.storage_provider AS ImageStorageProvider
             FROM food_items fi
             LEFT JOIN food_nutrition fn ON fn.food_item_id = fi.id
             LEFT JOIN food_item_images fii ON fi.source != 3 AND fii.id = fi.active_image_id
@@ -109,6 +113,13 @@ public class FoodService : IFoodService
                 var imageStoragePath = reader.IsDBNull(reader.GetOrdinal("ImageStoragePath"))
                     ? null
                     : reader.GetString(reader.GetOrdinal("ImageStoragePath"));
+                var imageStorageProvider = reader.IsDBNull(reader.GetOrdinal("ImageStorageProvider"))
+                    ? null
+                    : reader.GetString(reader.GetOrdinal("ImageStorageProvider"));
+                
+                string? resolvedImageUrl = source == 3
+                    ? thumbnailUrl
+                    : (imageStoragePath != null ? _storage.BuildUrl(imageStoragePath) : null);
 
                 items.Add(new FoodSearchResponse
                 {
@@ -126,7 +137,7 @@ public class FoodService : IFoodService
                     CaloriesKcal = reader.IsDBNull(reader.GetOrdinal("CaloriesKcal"))
                         ? null
                         : reader.GetDecimal(reader.GetOrdinal("CaloriesKcal")),
-                    ImageUrl = source == 3 ? thumbnailUrl : imageStoragePath
+                    ImageUrl = resolvedImageUrl
                 });
             }
         }
@@ -222,13 +233,19 @@ public class FoodService : IFoodService
             Status = 0, // pending
             ServingSizeG = request.ServingSizeG,
             ServingUnitVi = request.ServingUnitVi,
-            ThumbnailUrl = request.ThumbnailUrl,
             Barcode = request.Barcode,
             CreatedBy = userId,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
             // Community items: do NOT set ActiveImageId
         };
+
+        // Upload ảnh lên Cloudinary nếu có, lưu public_id vào ThumbnailUrl
+        if (request.Image != null)
+        {
+            var publicId = await _storage.UploadAsync(request.Image, folder: "foods");
+            foodItem.ThumbnailUrl = _storage.BuildUrl(publicId);
+        }
 
         var nutrition = new FoodNutrition
         {
