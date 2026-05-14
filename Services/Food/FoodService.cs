@@ -243,7 +243,7 @@ public class FoodService : IFoodService
         // Upload ảnh lên Cloudinary nếu có, lưu public_id vào ThumbnailUrl
         if (request.Image != null)
         {
-            var publicId = await _storage.UploadAsync(request.Image, folder: "foods");
+            var publicId = await _storage.UploadAsync(request.Image, folder: "wao/foods");
             foodItem.ThumbnailUrl = _storage.BuildUrl(publicId);
         }
 

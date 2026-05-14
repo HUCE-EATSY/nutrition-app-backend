@@ -4,6 +4,7 @@ using nutrition_app_backend.DTOs.Users;
 using nutrition_app_backend.Enums;
 using nutrition_app_backend.Exceptions;
 using nutrition_app_backend.Models.Users;
+using nutrition_app_backend.Services.Storage;
 
 namespace nutrition_app_backend.Services.User;
 
@@ -11,11 +12,13 @@ public class UserService : IUserService
 {
     private readonly WaoDbContext _dbContext;
     private readonly IMapper _mapper;
-    
-    public UserService(WaoDbContext dbContext, IMapper mapper)
+    private readonly IStorageService _storage;
+
+    public UserService(WaoDbContext dbContext, IMapper mapper, IStorageService storage)
     {
         _dbContext = dbContext;
         _mapper = mapper;
+        _storage = storage;
     }
 
     public async Task<UserGoalResponse> OnboardUserAsync(Guid userId, OnboardingRequest request)
@@ -175,5 +178,38 @@ public class UserService : IUserService
             CreatedAt = user.CreatedAt,
             UpdatedAt = user.UpdatedAt
         };
+    }
+
+    /// <summary>
+    /// Upload avatar lên Cloudinary, cập nhật AvatarUrl trong profile.
+    /// Trả về avatar_url mới để frontend hiển thị ngay.
+    /// </summary>
+    public async Task<string> UploadAvatarAsync(Guid userId, IFormFile file)
+    {
+        var profile = await _dbContext.UserProfiles.FindAsync(userId);
+        if (profile == null)
+            throw new NotFoundException("User profile not found. Please complete onboarding first.");
+
+        // Validate file
+        if (file == null || file.Length == 0)
+            throw new BusinessException("INVALID_FILE", "Vui lòng chọn ảnh hợp lệ.");
+
+        var allowedTypes = new[] { "image/jpeg", "image/png", "image/webp" };
+        if (!allowedTypes.Contains(file.ContentType.ToLower()))
+            throw new BusinessException("INVALID_FILE_TYPE", "Chỉ chấp nhận ảnh JPEG, PNG hoặc WebP.");
+
+        if (file.Length > 5 * 1024 * 1024)
+            throw new BusinessException("FILE_TOO_LARGE", "Ảnh không được vượt quá 5MB.");
+
+        // Upload lên Cloudinary, folder riêng cho avatar
+        var publicId = await _storage.UploadAsync(file, folder: "wao/avatars");
+        var avatarUrl = _storage.BuildUrl(publicId);
+
+        profile.AvatarUrl = avatarUrl;
+        profile.UpdatedAt = DateTime.UtcNow;
+
+        await _dbContext.SaveChangesAsync();
+
+        return avatarUrl;
     }
 }
