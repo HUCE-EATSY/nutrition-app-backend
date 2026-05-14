@@ -212,4 +212,35 @@ public class UserService : IUserService
 
         return avatarUrl;
     }
+
+    /// <summary>
+    /// Xóa tài khoản user (soft delete).
+    /// - Đánh dấu DeletedAt trên bản ghi User.
+    /// - Thu hồi toàn bộ RefreshToken còn hiệu lực để ngăn đăng nhập lại.
+    /// </summary>
+    public async Task DeleteAccountAsync(Guid userId)
+    {
+        var user = await _dbContext.Users.FindAsync(userId);
+        if (user == null)
+            throw new NotFoundException("User not found.");
+
+        if (user.DeletedAt.HasValue)
+            throw new BusinessException("ACCOUNT_ALREADY_DELETED", "Tài khoản đã bị xóa trước đó.");
+
+        var now = DateTime.UtcNow;
+
+        // Soft delete user
+        user.DeletedAt = now;
+        user.UpdatedAt = now;
+
+        // Thu hồi tất cả refresh token còn hiệu lực
+        var activeTokens = _dbContext.RefreshTokens
+            .Where(t => t.UserId == userId && t.RevokedAt == null);
+        
+        foreach (var token in activeTokens)
+            token.RevokedAt = now;
+
+        await _dbContext.SaveChangesAsync();
+    }
 }
+

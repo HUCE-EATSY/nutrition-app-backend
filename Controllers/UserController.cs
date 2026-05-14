@@ -68,4 +68,18 @@ public class UserController : ControllerBase
 
         return Ok(ApiResponse<object>.Success(new { avatar_url = avatarUrl }, "Cập nhật ảnh đại diện thành công"));
     }
+
+    /// <summary>
+    /// Xóa tài khoản của user đang đăng nhập (soft delete).
+    /// Tất cả refresh token sẽ bị thu hồi ngay lập tức.
+    /// Frontend nên xóa token cục bộ và điều hướng về màn hình đăng nhập sau khi nhận 204.
+    /// </summary>
+    [HttpDelete("account")]
+    public async Task<IActionResult> DeleteAccount()
+    {
+        Guid userId = User.GetUserId();
+        await _userService.DeleteAccountAsync(userId);
+
+        return NoContent();
+    }
 }
