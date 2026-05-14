@@ -54,12 +54,25 @@ public class AuthService : IAuthService
         Models.Users.User user;
         bool isNewUser = false;
 
-        if (authProvider != null)
+        if (authProvider != null && !authProvider.User.DeletedAt.HasValue)
         {
+            // Tài khoản bình thường — đăng nhập bình thường
             user = authProvider.User;
+        }
+        else if (authProvider != null && authProvider.User.DeletedAt.HasValue)
+        {
+            // Tài khoản đã bị xóa trước đó — coi như đăng ký lại:
+            // Tạo User mới hoàn toàn sạch, trỏ lại AuthProvider về userId mới.
+            isNewUser = true;
+            user = new Models.Users.User();
+            _dbContext.Users.Add(user);
+            await _dbContext.SaveChangesAsync();
+
+            authProvider.UserId = user.Id;
         }
         else
         {
+            // Lần đầu đăng nhập — tạo User + AuthProvider mới
             isNewUser = true;
             user = new Models.Users.User();
             _dbContext.Users.Add(user);
@@ -74,9 +87,9 @@ public class AuthService : IAuthService
                 VerifiedAt = DateTime.UtcNow
             };
             _dbContext.UserAuthProviders.Add(newAuth);
-
-            await _dbContext.SaveChangesAsync();
         }
+
+        await _dbContext.SaveChangesAsync();
         return await _tokenService.CreateTokensAsync(user, isNewUser, email);
     }
 }

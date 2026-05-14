@@ -54,4 +54,32 @@ public class UserController : ControllerBase
 
         return Ok(ApiResponse<GetUserInfoResponse>.Success(result, "Lấy thông tin thành công"));
     }
+
+    /// <summary>
+    /// Upload avatar lên Cloudinary. Gửi dưới dạng multipart/form-data với field "avatar".
+    /// Trả về avatar_url mới sau khi cập nhật.
+    /// </summary>
+    [HttpPost("avatar")]
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> UploadAvatar(IFormFile avatar)
+    {
+        Guid userId = User.GetUserId();
+        var avatarUrl = await _userService.UploadAvatarAsync(userId, avatar);
+
+        return Ok(ApiResponse<object>.Success(new { avatar_url = avatarUrl }, "Cập nhật ảnh đại diện thành công"));
+    }
+
+    /// <summary>
+    /// Xóa tài khoản của user đang đăng nhập (soft delete).
+    /// Tất cả refresh token sẽ bị thu hồi ngay lập tức.
+    /// Frontend nên xóa token cục bộ và điều hướng về màn hình đăng nhập sau khi nhận 204.
+    /// </summary>
+    [HttpDelete("account")]
+    public async Task<IActionResult> DeleteAccount()
+    {
+        Guid userId = User.GetUserId();
+        await _userService.DeleteAccountAsync(userId);
+
+        return NoContent();
+    }
 }
