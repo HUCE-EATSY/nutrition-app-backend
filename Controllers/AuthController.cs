@@ -23,7 +23,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("google")]
-    public async Task<IActionResult> LoginWithGoogle([FromBody] GoogleLoginRequest request)
+    public async Task<ActionResult<ApiResponse<AuthResponse>>> LoginWithGoogle([FromBody] GoogleLoginRequest request)
     {
         var result = await _authService.LoginWithGoogleAsync(request);
 
@@ -31,7 +31,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("refresh")]
-    public async Task<IActionResult> Refresh([FromBody] RefreshRequest request)
+    public async Task<ActionResult<ApiResponse<AuthResponse>>> Refresh([FromBody] RefreshRequest request)
     {
         var result = await _tokenService.RefreshAsync(request.RefreshToken);
 
@@ -39,10 +39,10 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("logout")]
-    public async Task<IActionResult> Logout([FromBody] RefreshRequest request)
+    public async Task<ActionResult<ApiResponse<object>>> Logout([FromBody] RefreshRequest request)
     {
         await _tokenService.RevokeAsync(request.RefreshToken);
 
-        return Ok(ApiResponse<object>.Success(null, "Đăng xuất thành công"));
+        return Ok(ApiResponse<object>.Success(null!, "Đăng xuất thành công"));
     }
 }

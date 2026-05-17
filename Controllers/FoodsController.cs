@@ -23,7 +23,7 @@ public class FoodsController : ControllerBase
     /// Fulltext search food items. Approved items visible to all; pending items only to creator.
     /// </summary>
     [HttpGet("search")]
-    public async Task<IActionResult> Search([FromQuery] FoodSearchRequest request)
+    public async Task<ActionResult<ApiResponse<PaginatedResponse<FoodSearchResponse>>>> Search([FromQuery] FoodSearchRequest request)
     {
         Guid userId = User.GetUserId();
         var result = await _foodService.SearchAsync(request, userId);
@@ -35,7 +35,7 @@ public class FoodsController : ControllerBase
     /// Get food detail by ID with nutrition and image.
     /// </summary>
     [HttpGet("{id:guid}")]
-    public async Task<IActionResult> GetById(Guid id)
+    public async Task<ActionResult<ApiResponse<FoodDetailResponse>>> GetById([FromRoute] Guid id)
     {
         var result = await _foodService.GetByIdAsync(id);
 
@@ -46,7 +46,7 @@ public class FoodsController : ControllerBase
     /// Get components (children) of a food item.
     /// </summary>
     [HttpGet("{id:guid}/components")]
-    public async Task<IActionResult> GetComponents(Guid id)
+    public async Task<ActionResult<ApiResponse<List<FoodComponentResponse>>>> GetComponents([FromRoute] Guid id)
     {
         var result = await _foodService.GetComponentsAsync(id);
 
@@ -57,7 +57,7 @@ public class FoodsController : ControllerBase
     /// Barcode lookup. Returns 404 if not found.
     /// </summary>
     [HttpGet("barcode/{barcode:long}")]
-    public async Task<IActionResult> GetByBarcode(ulong barcode)
+    public async Task<ActionResult<ApiResponse<FoodDetailResponse>>> GetByBarcode([FromRoute] ulong barcode)
     {
         var result = await _foodService.GetByBarcodeAsync(barcode);
 
@@ -70,7 +70,7 @@ public class FoodsController : ControllerBase
     /// </summary>
     [HttpPost]
     [Consumes("multipart/form-data")]
-    public async Task<IActionResult> Create([FromForm] CreateFoodRequest request)
+    public async Task<ActionResult<ApiResponse<FoodDetailResponse>>> Create([FromForm] CreateFoodRequest request)
     {
         Guid userId = User.GetUserId();
         var result = await _foodService.CreateAsync(request, userId);
