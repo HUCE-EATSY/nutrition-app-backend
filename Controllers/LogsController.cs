@@ -28,7 +28,7 @@ public class LogsController : ControllerBase
     /// Get food logs for a specific date, grouped by meal type.
     /// </summary>
     [HttpGet("food")]
-    public async Task<IActionResult> GetDailyFoodLogs([FromQuery] DateOnly date)
+    public async Task<ActionResult<ApiResponse<DailyFoodLogsResponse>>> GetDailyFoodLogs([FromQuery] DateOnly date)
     {
         Guid userId = User.GetUserId();
         var result = await _foodLogService.GetDailyLogsAsync(userId, date);
@@ -40,7 +40,7 @@ public class LogsController : ControllerBase
     /// Create a new food log entry. Macros are snapshot using Atwater formula.
     /// </summary>
     [HttpPost("food")]
-    public async Task<IActionResult> CreateFoodLog([FromBody] CreateFoodLogRequest request)
+    public async Task<ActionResult<ApiResponse<FoodLogResponse>>> CreateFoodLog([FromBody] CreateFoodLogRequest request)
     {
         Guid userId = User.GetUserId();
         var result = await _foodLogService.CreateAsync(userId, request);
@@ -53,7 +53,7 @@ public class LogsController : ControllerBase
     /// Update quantity of an existing food log. Macros are recalculated.
     /// </summary>
     [HttpPut("food/{id:long}")]
-    public async Task<IActionResult> UpdateFoodLog(ulong id, [FromBody] UpdateFoodLogRequest request)
+    public async Task<ActionResult<ApiResponse<FoodLogResponse>>> UpdateFoodLog([FromRoute] ulong id, [FromBody] UpdateFoodLogRequest request)
     {
         Guid userId = User.GetUserId();
         var result = await _foodLogService.UpdateAsync(userId, id, request);
@@ -65,19 +65,19 @@ public class LogsController : ControllerBase
     /// Delete a food log entry. Only the owner can delete.
     /// </summary>
     [HttpDelete("food/{id:long}")]
-    public async Task<IActionResult> DeleteFoodLog(ulong id)
+    public async Task<ActionResult<ApiResponse<object>>> DeleteFoodLog([FromRoute] ulong id)
     {
         Guid userId = User.GetUserId();
         await _foodLogService.DeleteAsync(userId, id);
 
-        return Ok(ApiResponse<object>.Success(null, "Xóa log thành công"));
+        return Ok(ApiResponse<object>.Success(null!, "Xóa log thành công"));
     }
 
     /// <summary>
     /// Get daily summary: total macros + comparison with active target.
     /// </summary>
     [HttpGet("food/summary")]
-    public async Task<IActionResult> GetDailySummary([FromQuery] DateOnly date)
+    public async Task<ActionResult<ApiResponse<DailySummaryResponse>>> GetDailySummary([FromQuery] DateOnly date)
     {
         Guid userId = User.GetUserId();
         var result = await _foodLogService.GetDailySummaryAsync(userId, date);
@@ -91,7 +91,7 @@ public class LogsController : ControllerBase
     /// Create a weight log. Returns 409 if already logged for the same day.
     /// </summary>
     [HttpPost("weight")]
-    public async Task<IActionResult> CreateWeightLog([FromBody] CreateWeightLogRequest request)
+    public async Task<ActionResult<ApiResponse<WeightLogResponse>>> CreateWeightLog([FromBody] CreateWeightLogRequest request)
     {
         Guid userId = User.GetUserId();
         var result = await _weightLogService.CreateAsync(userId, request);
@@ -104,7 +104,7 @@ public class LogsController : ControllerBase
     /// Get weight log timeline for chart display. Ordered ascending by date.
     /// </summary>
     [HttpGet("weight")]
-    public async Task<IActionResult> GetWeightTimeline([FromQuery] DateOnly from, [FromQuery] DateOnly to)
+    public async Task<ActionResult<ApiResponse<List<WeightLogResponse>>>> GetWeightTimeline([FromQuery] DateOnly from, [FromQuery] DateOnly to)
     {
         Guid userId = User.GetUserId();
         var result = await _weightLogService.GetTimelineAsync(userId, from, to);
@@ -116,7 +116,7 @@ public class LogsController : ControllerBase
     /// Update an existing weight log (weight_kg and note). Returns 404 if not found, 403 if not owner.
     /// </summary>
     [HttpPut("weight/{id:long}")]
-    public async Task<IActionResult> UpdateWeightLog(ulong id, [FromBody] UpdateWeightLogRequest request)
+    public async Task<ActionResult<ApiResponse<WeightLogResponse>>> UpdateWeightLog([FromRoute] ulong id, [FromBody] UpdateWeightLogRequest request)
     {
         Guid userId = User.GetUserId();
         var result = await _weightLogService.UpdateAsync(userId, id, request);

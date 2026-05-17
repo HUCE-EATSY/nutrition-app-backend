@@ -22,7 +22,7 @@ public class MealTypesController : ControllerBase
     /// Get all meal types (sáng/trưa/tối/phụ).
     /// </summary>
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<ActionResult<ApiResponse<List<MealTypeResponse>>>> GetAll()
     {
         var result = await _foodService.GetMealTypesAsync();
 
