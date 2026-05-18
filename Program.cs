@@ -13,6 +13,7 @@ using nutrition_app_backend.Services.Storage;
 using nutrition_app_backend.Services.Token;
 using nutrition_app_backend.Services.User;
 using nutrition_app_backend.Services.WeightLog;
+// using nutrition_app_backend.Services.AdminFood;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -42,8 +43,7 @@ builder.Services.AddCors(options =>
                 "http://localhost:8081" // React Native Web
             )
             .AllowAnyHeader()
-            .AllowAnyMethod()
-            .AllowCredentials());
+            .AllowAnyMethod());
 });
 
 // ====== DB CONFIG ======
@@ -66,6 +66,7 @@ builder.Services.AddScoped<IFoodService, FoodService>();
 builder.Services.AddScoped<IFoodLogService, FoodLogService>();
 builder.Services.AddScoped<IWeightLogService, WeightLogService>();
 builder.Services.AddScoped<IStorageService, CloudinaryStorageService>();
+// builder.Services.AddScoped<IAdminFoodService, AdminFoodService>();
 
 // =====================
 // AUTOMAPPER
