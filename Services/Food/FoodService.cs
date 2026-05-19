@@ -67,13 +67,16 @@ public class FoodService : IFoodService
                 fi.ThumbnailUrl     AS ThumbnailUrl,
                 fi.ActiveImageId   AS ActiveImageId,
                 fn.CaloriesKcal     AS CaloriesKcal,
+                fn.ProteinG         AS ProteinG,
+                fn.CarbsG           AS CarbsG,
+                fn.FatG             AS FatG,
                 fii.StoragePath     AS ImageStoragePath,
                 fii.StorageProvider AS ImageStorageProvider
             FROM food_items fi
             LEFT JOIN food_nutrition fn ON fn.FoodItemId = fi.Id
             LEFT JOIN food_item_images fii ON fi.Source != 3 AND fii.Id = fi.ActiveImageId
             WHERE {whereClause}
-            ORDER BY fi.Id DESC
+            ORDER BY fi.CreatedAt DESC
             LIMIT @limit OFFSET @offset";
 
         var items = new List<FoodSearchResponse>();
@@ -121,6 +124,15 @@ public class FoodService : IFoodService
                     CaloriesKcal = reader.IsDBNull(reader.GetOrdinal("CaloriesKcal"))
                         ? null
                         : reader.GetDecimal(reader.GetOrdinal("CaloriesKcal")),
+                    ProteinG = reader.IsDBNull(reader.GetOrdinal("ProteinG"))
+                        ? null
+                        : reader.GetDecimal(reader.GetOrdinal("ProteinG")),
+                    CarbsG = reader.IsDBNull(reader.GetOrdinal("CarbsG"))
+                        ? null
+                        : reader.GetDecimal(reader.GetOrdinal("CarbsG")),
+                    FatG = reader.IsDBNull(reader.GetOrdinal("FatG"))
+                        ? null
+                        : reader.GetDecimal(reader.GetOrdinal("FatG")),
                     ImageUrl = resolvedImageUrl
                 });
             }
@@ -185,6 +197,9 @@ public class FoodService : IFoodService
                 fi.ThumbnailUrl     AS ThumbnailUrl,
                 fi.ActiveImageId   AS ActiveImageId,
                 fn.CaloriesKcal     AS CaloriesKcal,
+                fn.ProteinG         AS ProteinG,
+                fn.CarbsG           AS CarbsG,
+                fn.FatG             AS FatG,
                 fii.StoragePath     AS ImageStoragePath,
                 fii.StorageProvider AS ImageStorageProvider
             FROM food_items fi
@@ -241,6 +256,15 @@ public class FoodService : IFoodService
                     CaloriesKcal = reader.IsDBNull(reader.GetOrdinal("CaloriesKcal"))
                         ? null
                         : reader.GetDecimal(reader.GetOrdinal("CaloriesKcal")),
+                    ProteinG = reader.IsDBNull(reader.GetOrdinal("ProteinG"))
+                        ? null
+                        : reader.GetDecimal(reader.GetOrdinal("ProteinG")),
+                    CarbsG = reader.IsDBNull(reader.GetOrdinal("CarbsG"))
+                        ? null
+                        : reader.GetDecimal(reader.GetOrdinal("CarbsG")),
+                    FatG = reader.IsDBNull(reader.GetOrdinal("FatG"))
+                        ? null
+                        : reader.GetDecimal(reader.GetOrdinal("FatG")),
                     ImageUrl = resolvedImageUrl
                 });
             }
@@ -285,6 +309,8 @@ public class FoodService : IFoodService
             .Where(c => c.ParentFoodId == foodItemId)
             .Include(c => c.ChildFood)
                 .ThenInclude(cf => cf.Nutrition)
+            .Include(c => c.ChildFood)
+                .ThenInclude(cf => cf.ActiveImage)
             .ToListAsync();
 
         return _mapper.Map<List<FoodComponentResponse>>(components);
