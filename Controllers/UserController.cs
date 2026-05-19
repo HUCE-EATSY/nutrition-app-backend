@@ -20,7 +20,7 @@ public class UserController : ControllerBase
     }
 
     [HttpPost("onboarding")]
-    public async Task<IActionResult> OnboardUser([FromBody] OnboardingRequest request)
+    public async Task<ActionResult<ApiResponse<UserGoalResponse>>> OnboardUser([FromBody] OnboardingRequest request)
     {
         Guid userId = User.GetUserId();
         var result = await _userService.OnboardUserAsync(userId, request);
@@ -29,7 +29,7 @@ public class UserController : ControllerBase
     }
 
     [HttpPut("profile")]
-    public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileRequest request)
+    public async Task<ActionResult<ApiResponse<UserProfileResponse>>> UpdateProfile([FromBody] UpdateProfileRequest request)
     {
         Guid userId = User.GetUserId();
         var result = await _userService.UpdateUserProfileAsync(userId, request);
@@ -38,7 +38,7 @@ public class UserController : ControllerBase
     }
 
     [HttpPut("goal")]
-    public async Task<IActionResult> UpdateGoal([FromBody] UpdateUserGoalRequest request)
+    public async Task<ActionResult<ApiResponse<UserGoalUpdateResponse>>> UpdateGoal([FromBody] UpdateUserGoalRequest request)
     {
         Guid userId = User.GetUserId();
         var result = await _userService.UpdateUserGoalAsync(userId, request);
@@ -47,11 +47,39 @@ public class UserController : ControllerBase
     }
 
     [HttpGet("info")]
-    public async Task<IActionResult> GetUserInfo()
+    public async Task<ActionResult<ApiResponse<GetUserInfoResponse>>> GetUserInfo()
     {
         Guid userId = User.GetUserId();
         var result = await _userService.GetUserInfoAsync(userId);
 
         return Ok(ApiResponse<GetUserInfoResponse>.Success(result, "Lấy thông tin thành công"));
+    }
+
+    /// <summary>
+    /// Upload avatar lên Cloudinary. Gửi dưới dạng multipart/form-data với field "avatar".
+    /// Trả về avatar_url mới sau khi cập nhật.
+    /// </summary>
+    [HttpPost("avatar")]
+    [Consumes("multipart/form-data")]
+    public async Task<ActionResult<ApiResponse<object>>> UploadAvatar(IFormFile avatar)
+    {
+        Guid userId = User.GetUserId();
+        var avatarUrl = await _userService.UploadAvatarAsync(userId, avatar);
+
+        return Ok(ApiResponse<object>.Success(new { avatar_url = avatarUrl }, "Cập nhật ảnh đại diện thành công"));
+    }
+
+    /// <summary>
+    /// Xóa tài khoản của user đang đăng nhập (soft delete).
+    /// Tất cả refresh token sẽ bị thu hồi ngay lập tức.
+    /// Frontend nên xóa token cục bộ và điều hướng về màn hình đăng nhập sau khi nhận 204.
+    /// </summary>
+    [HttpDelete("account")]
+    public async Task<ActionResult> DeleteAccount()
+    {
+        Guid userId = User.GetUserId();
+        await _userService.DeleteAccountAsync(userId);
+
+        return NoContent();
     }
 }

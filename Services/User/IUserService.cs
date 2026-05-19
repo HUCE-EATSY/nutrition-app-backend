@@ -8,4 +8,6 @@ public interface IUserService
     Task<UserProfileResponse> UpdateUserProfileAsync(Guid userId, UpdateProfileRequest request);
     Task<UserGoalUpdateResponse> UpdateUserGoalAsync(Guid userId, UpdateUserGoalRequest request);
     Task<GetUserInfoResponse> GetUserInfoAsync(Guid userId);
+    Task<string> UploadAvatarAsync(Guid userId, IFormFile file);
+    Task DeleteAccountAsync(Guid userId);
 }
