@@ -1,5 +1,6 @@
 using AutoMapper;
 using nutrition_app_backend.Data;
+using Microsoft.EntityFrameworkCore;
 using nutrition_app_backend.DTOs.Users;
 using nutrition_app_backend.Enums;
 using nutrition_app_backend.Exceptions;
@@ -27,24 +28,39 @@ public class UserService : IUserService
         if (user == null)
             throw new NotFoundException("User not found.");
         
-        var existingProfile = _dbContext.UserProfiles
-            .FirstOrDefault(x => x.UserId == userId);
+        var existingProfile = await _dbContext.UserProfiles
+            .FirstOrDefaultAsync(x => x.UserId == userId);
 
         if (existingProfile != null)
         {
-            throw new BusinessException("USER_ALREADY_ONBOARDED", "User already onboarded.");
+            existingProfile.DisplayName = request.DisplayName;
+            existingProfile.Gender = request.Gender;
+            existingProfile.DateOfBirth = request.DateOfBirth;
+            existingProfile.HeightCm = request.HeightCm;
+            existingProfile.WeightKg = request.WeightKg;
+            existingProfile.UpdatedAt = DateTime.UtcNow;
+
+            var existingGoals = await _dbContext.UserGoals
+                .Where(x => x.UserId == userId && x.IsActive)
+                .ToListAsync();
+            foreach (var eg in existingGoals)
+            {
+                eg.IsActive = false;
+            }
         }
-        
-        var profile = new UserProfile
+        else
         {
-            UserId = userId,
-            DisplayName = request.DisplayName,
-            Gender = request.Gender,
-            DateOfBirth = request.DateOfBirth,
-            HeightCm = request.HeightCm,
-            WeightKg = request.WeightKg,
-        };
-        _dbContext.UserProfiles.Add(profile);
+            var profile = new UserProfile
+            {
+                UserId = userId,
+                DisplayName = request.DisplayName,
+                Gender = request.Gender,
+                DateOfBirth = request.DateOfBirth,
+                HeightCm = request.HeightCm,
+                WeightKg = request.WeightKg,
+            };
+            _dbContext.UserProfiles.Add(profile);
+        }
 
         // 2. TÍNH TOÁN NGHIỆP VỤ 
         int age = DateTime.Now.Year - request.DateOfBirth.Year;
@@ -106,7 +122,7 @@ public class UserService : IUserService
         profile.UpdatedAt = DateTime.UtcNow;
 
         // 2. CẬP NHẬT GOAL NẾU CÓ THAY ĐỔI
-        var goal = _dbContext.UserGoals.FirstOrDefault(x => x.UserId == userId && x.IsActive);
+        var goal = await _dbContext.UserGoals.FirstOrDefaultAsync(x => x.UserId == userId && x.IsActive);
         if (goal != null)
         {
             int age = DateTime.Now.Year - request.DateOfBirth.Year;
@@ -144,7 +160,7 @@ public class UserService : IUserService
 
     public async Task<UserGoalUpdateResponse> UpdateUserGoalAsync(Guid userId, UpdateUserGoalRequest request)
     {
-        var goal = _dbContext.UserGoals.FirstOrDefault(x => x.UserId == userId && x.IsActive);
+        var goal = await _dbContext.UserGoals.FirstOrDefaultAsync(x => x.UserId == userId && x.IsActive);
         if (goal == null)
             throw new NotFoundException("User goal not found.");
 
@@ -168,7 +184,7 @@ public class UserService : IUserService
             throw new NotFoundException("User not found.");
 
         var profile = await _dbContext.UserProfiles.FindAsync(userId);
-        var activeGoal = _dbContext.UserGoals.FirstOrDefault(x => x.UserId == userId && x.IsActive);
+        var activeGoal = await _dbContext.UserGoals.FirstOrDefaultAsync(x => x.UserId == userId && x.IsActive);
 
         return new GetUserInfoResponse
         {
