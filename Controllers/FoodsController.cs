@@ -9,7 +9,7 @@ namespace nutrition_app_backend.Controllers;
 
 [ApiController]
 [Route("api/foods")]
-[Authorize]
+[AllowAnonymous]
 public class FoodsController : ControllerBase
 {
     private readonly IFoodService _foodService;
