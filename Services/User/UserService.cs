@@ -1,9 +1,11 @@
 using AutoMapper;
 using nutrition_app_backend.Data;
+using Microsoft.EntityFrameworkCore;
 using nutrition_app_backend.DTOs.Users;
 using nutrition_app_backend.Enums;
 using nutrition_app_backend.Exceptions;
 using nutrition_app_backend.Models.Users;
+using nutrition_app_backend.Services.Storage;
 
 namespace nutrition_app_backend.Services.User;
 
@@ -11,11 +13,13 @@ public class UserService : IUserService
 {
     private readonly WaoDbContext _dbContext;
     private readonly IMapper _mapper;
-    
-    public UserService(WaoDbContext dbContext, IMapper mapper)
+    private readonly IStorageService _storage;
+
+    public UserService(WaoDbContext dbContext, IMapper mapper, IStorageService storage)
     {
         _dbContext = dbContext;
         _mapper = mapper;
+        _storage = storage;
     }
 
     public async Task<UserGoalResponse> OnboardUserAsync(Guid userId, OnboardingRequest request)
@@ -24,24 +28,39 @@ public class UserService : IUserService
         if (user == null)
             throw new NotFoundException("User not found.");
         
-        var existingProfile = _dbContext.UserProfiles
-            .FirstOrDefault(x => x.UserId == userId);
+        var existingProfile = await _dbContext.UserProfiles
+            .FirstOrDefaultAsync(x => x.UserId == userId);
 
         if (existingProfile != null)
         {
-            throw new BusinessException("USER_ALREADY_ONBOARDED", "User already onboarded.");
+            existingProfile.DisplayName = request.DisplayName;
+            existingProfile.Gender = request.Gender;
+            existingProfile.DateOfBirth = request.DateOfBirth;
+            existingProfile.HeightCm = request.HeightCm;
+            existingProfile.WeightKg = request.WeightKg;
+            existingProfile.UpdatedAt = DateTime.UtcNow;
+
+            var existingGoals = await _dbContext.UserGoals
+                .Where(x => x.UserId == userId && x.IsActive)
+                .ToListAsync();
+            foreach (var eg in existingGoals)
+            {
+                eg.IsActive = false;
+            }
         }
-        
-        var profile = new UserProfile
+        else
         {
-            UserId = userId,
-            DisplayName = request.DisplayName,
-            Gender = request.Gender,
-            DateOfBirth = request.DateOfBirth,
-            HeightCm = request.HeightCm,
-            WeightKg = request.WeightKg,
-        };
-        _dbContext.UserProfiles.Add(profile);
+            var profile = new UserProfile
+            {
+                UserId = userId,
+                DisplayName = request.DisplayName,
+                Gender = request.Gender,
+                DateOfBirth = request.DateOfBirth,
+                HeightCm = request.HeightCm,
+                WeightKg = request.WeightKg,
+            };
+            _dbContext.UserProfiles.Add(profile);
+        }
 
         // 2. TÍNH TOÁN NGHIỆP VỤ 
         int age = DateTime.Now.Year - request.DateOfBirth.Year;
@@ -103,7 +122,7 @@ public class UserService : IUserService
         profile.UpdatedAt = DateTime.UtcNow;
 
         // 2. CẬP NHẬT GOAL NẾU CÓ THAY ĐỔI
-        var goal = _dbContext.UserGoals.FirstOrDefault(x => x.UserId == userId && x.IsActive);
+        var goal = await _dbContext.UserGoals.FirstOrDefaultAsync(x => x.UserId == userId && x.IsActive);
         if (goal != null)
         {
             int age = DateTime.Now.Year - request.DateOfBirth.Year;
@@ -141,7 +160,7 @@ public class UserService : IUserService
 
     public async Task<UserGoalUpdateResponse> UpdateUserGoalAsync(Guid userId, UpdateUserGoalRequest request)
     {
-        var goal = _dbContext.UserGoals.FirstOrDefault(x => x.UserId == userId && x.IsActive);
+        var goal = await _dbContext.UserGoals.FirstOrDefaultAsync(x => x.UserId == userId && x.IsActive);
         if (goal == null)
             throw new NotFoundException("User goal not found.");
 
@@ -165,7 +184,7 @@ public class UserService : IUserService
             throw new NotFoundException("User not found.");
 
         var profile = await _dbContext.UserProfiles.FindAsync(userId);
-        var activeGoal = _dbContext.UserGoals.FirstOrDefault(x => x.UserId == userId && x.IsActive);
+        var activeGoal = await _dbContext.UserGoals.FirstOrDefaultAsync(x => x.UserId == userId && x.IsActive);
 
         return new GetUserInfoResponse
         {
@@ -176,4 +195,68 @@ public class UserService : IUserService
             UpdatedAt = user.UpdatedAt
         };
     }
+
+    /// <summary>
+    /// Upload avatar lên Cloudinary, cập nhật AvatarUrl trong profile.
+    /// Trả về avatar_url mới để frontend hiển thị ngay.
+    /// </summary>
+    public async Task<string> UploadAvatarAsync(Guid userId, IFormFile file)
+    {
+        var profile = await _dbContext.UserProfiles.FindAsync(userId);
+        if (profile == null)
+            throw new NotFoundException("User profile not found. Please complete onboarding first.");
+
+        // Validate file
+        if (file == null || file.Length == 0)
+            throw new BusinessException("INVALID_FILE", "Vui lòng chọn ảnh hợp lệ.");
+
+        var allowedTypes = new[] { "image/jpeg", "image/png", "image/webp" };
+        if (!allowedTypes.Contains(file.ContentType.ToLower()))
+            throw new BusinessException("INVALID_FILE_TYPE", "Chỉ chấp nhận ảnh JPEG, PNG hoặc WebP.");
+
+        if (file.Length > 5 * 1024 * 1024)
+            throw new BusinessException("FILE_TOO_LARGE", "Ảnh không được vượt quá 5MB.");
+
+        // Upload lên Cloudinary, folder riêng cho avatar
+        var publicId = await _storage.UploadAsync(file, folder: "wao/avatars");
+        var avatarUrl = _storage.BuildUrl(publicId);
+
+        profile.AvatarUrl = avatarUrl;
+        profile.UpdatedAt = DateTime.UtcNow;
+
+        await _dbContext.SaveChangesAsync();
+
+        return avatarUrl;
+    }
+
+    /// <summary>
+    /// Xóa tài khoản user (soft delete).
+    /// - Đánh dấu DeletedAt trên bản ghi User.
+    /// - Thu hồi toàn bộ RefreshToken còn hiệu lực để ngăn đăng nhập lại.
+    /// </summary>
+    public async Task DeleteAccountAsync(Guid userId)
+    {
+        var user = await _dbContext.Users.FindAsync(userId);
+        if (user == null)
+            throw new NotFoundException("User not found.");
+
+        if (user.DeletedAt.HasValue)
+            throw new BusinessException("ACCOUNT_ALREADY_DELETED", "Tài khoản đã bị xóa trước đó.");
+
+        var now = DateTime.UtcNow;
+
+        // Soft delete user
+        user.DeletedAt = now;
+        user.UpdatedAt = now;
+
+        // Thu hồi tất cả refresh token còn hiệu lực
+        var activeTokens = _dbContext.RefreshTokens
+            .Where(t => t.UserId == userId && t.RevokedAt == null);
+        
+        foreach (var token in activeTokens)
+            token.RevokedAt = now;
+
+        await _dbContext.SaveChangesAsync();
+    }
 }
+
