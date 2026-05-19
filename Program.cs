@@ -13,10 +13,17 @@ using nutrition_app_backend.Services.Storage;
 using nutrition_app_backend.Services.Token;
 using nutrition_app_backend.Services.User;
 using nutrition_app_backend.Services.WeightLog;
+using nutrition_app_backend.Services.Exercise;
+using nutrition_app_backend.Services.Notification;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+        options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
+    })
     .ConfigureApiBehaviorOptions(options =>
     {
         options.InvalidModelStateResponseFactory = context =>
@@ -38,12 +45,9 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll",
         policy => policy
-            .WithOrigins(
-                "http://localhost:8081" // React Native Web
-            )
+            .AllowAnyOrigin() // Allow all origins for development
             .AllowAnyHeader()
-            .AllowAnyMethod()
-            .AllowCredentials());
+            .AllowAnyMethod());
 });
 
 // ====== DB CONFIG ======
@@ -66,6 +70,8 @@ builder.Services.AddScoped<IFoodService, FoodService>();
 builder.Services.AddScoped<IFoodLogService, FoodLogService>();
 builder.Services.AddScoped<IWeightLogService, WeightLogService>();
 builder.Services.AddScoped<IStorageService, CloudinaryStorageService>();
+builder.Services.AddScoped<IExerciseService, ExerciseService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 
 // =====================
 // AUTOMAPPER
@@ -98,44 +104,51 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             // ❌ Không có token hoặc không gửi Authorization header
             OnChallenge = context =>
             {
+                // Skip default logic
                 context.HandleResponse();
-                context.Response.StatusCode = 401;
-
-                return context.Response.WriteAsJsonAsync(new ProblemDetails
+                
+                // Only set status if response hasn't started
+                if (!context.Response.HasStarted)
                 {
-                    Title = "Request failed",
-                    Status = StatusCodes.Status401Unauthorized,
-                    Detail = "Unauthorized",
-                    Instance = context.Request.Path.ToString()
-                });
+                    context.Response.StatusCode = 401;
+                    context.Response.ContentType = "application/json";
+                    
+                    return context.Response.WriteAsJsonAsync(new ProblemDetails
+                    {
+                        Title = "Request failed",
+                        Status = StatusCodes.Status401Unauthorized,
+                        Detail = "Unauthorized",
+                        Instance = context.Request.Path.ToString()
+                    });
+                }
+                
+                return Task.CompletedTask;
             },
 
             // ❌ Token sai / expired / signature fail
             OnAuthenticationFailed = context =>
             {
-                context.NoResult();
-                context.Response.StatusCode = 401;
-
-                return context.Response.WriteAsJsonAsync(new ProblemDetails
-                {
-                    Title = "Request failed",
-                    Status = StatusCodes.Status401Unauthorized,
-                    Detail = "Unauthorized",
-                    Instance = context.Request.Path.ToString()
-                });
+                // Don't call NoResult() - it causes issues
+                return Task.CompletedTask;
             },
 
             OnForbidden = context =>
             {
-                context.Response.StatusCode = 403;
-
-                return context.Response.WriteAsJsonAsync(new ProblemDetails
+                if (!context.Response.HasStarted)
                 {
-                    Title = "Request failed",
-                    Status = StatusCodes.Status403Forbidden,
-                    Detail = "Forbidden",
-                    Instance = context.Request.Path.ToString()
-                });
+                    context.Response.StatusCode = 403;
+                    context.Response.ContentType = "application/json";
+
+                    return context.Response.WriteAsJsonAsync(new ProblemDetails
+                    {
+                        Title = "Request failed",
+                        Status = StatusCodes.Status403Forbidden,
+                        Detail = "Forbidden",
+                        Instance = context.Request.Path.ToString()
+                    });
+                }
+                
+                return Task.CompletedTask;
             }
         };
     });
