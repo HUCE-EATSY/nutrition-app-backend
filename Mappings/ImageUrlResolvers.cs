@@ -27,7 +27,7 @@ public class FoodItemImageUrlResolver : IValueResolver<FoodItem, FoodDetailRespo
             return src.ThumbnailUrl; // Community: full URL đã lưu sẵn
 
         if (src.ActiveImage == null)
-            return null; // Official nhưng chưa có ảnh
+            return src.ThumbnailUrl; // Official có thể có url ảnh cào sẵn trong ThumbnailUrl
 
         return _storage.BuildUrl(src.ActiveImage.StoragePath); // Official: build URL từ public_id
     }
@@ -54,5 +54,29 @@ public class FoodLogImageUrlResolver : IValueResolver<FoodLog, FoodLogResponse, 
             return null;
 
         return _storage.BuildUrl(src.FoodItem.ActiveImage.StoragePath);
+    }
+}
+
+/// <summary>
+/// AutoMapper IValueResolver để build image_url khi map FoodItemComponent -> FoodComponentResponse.
+/// </summary>
+public class FoodComponentImageUrlResolver : IValueResolver<FoodItemComponent, FoodComponentResponse, string?>
+{
+    private readonly IStorageService _storage;
+
+    public FoodComponentImageUrlResolver(IStorageService storage)
+    {
+        _storage = storage;
+    }
+
+    public string? Resolve(FoodItemComponent src, FoodComponentResponse dest, string? destMember, ResolutionContext context)
+    {
+        if (src.ChildFood.Source == 3)
+            return src.ChildFood.ThumbnailUrl;
+
+        if (src.ChildFood.ActiveImage == null)
+            return src.ChildFood.ThumbnailUrl; // Fallback nếu không có ActiveImage (chẳng hạn ảnh cào hoặc official link sẵn)
+
+        return _storage.BuildUrl(src.ChildFood.ActiveImage.StoragePath);
     }
 }

@@ -28,6 +28,15 @@ public class FoodSearchResponse
     [JsonPropertyName("calories_kcal")]
     public decimal? CaloriesKcal { get; set; }
 
+    [JsonPropertyName("protein_g")]
+    public decimal? ProteinG { get; set; }
+
+    [JsonPropertyName("carbs_g")]
+    public decimal? CarbsG { get; set; }
+
+    [JsonPropertyName("fat_g")]
+    public decimal? FatG { get; set; }
+
     [JsonPropertyName("image_url")]
     public string? ImageUrl { get; set; }
 }

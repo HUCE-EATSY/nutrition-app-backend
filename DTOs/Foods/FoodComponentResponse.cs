@@ -30,4 +30,7 @@ public class FoodComponentResponse
 
     [JsonPropertyName("fat_g")]
     public decimal? FatG { get; set; }
+
+    [JsonPropertyName("child_food_image_url")]
+    public string? ChildFoodImageUrl { get; set; }
 }
