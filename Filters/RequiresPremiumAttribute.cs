@@ -21,10 +21,9 @@ public class RequiresPremiumAttribute : Attribute, IAsyncAuthorizationFilter
         var userId = Guid.Empty; // Mock for testing since Auth is commented out currently
 
         var subscriptionService = context.HttpContext.RequestServices.GetRequiredService<ISubscriptionService>();
-        var sub = await subscriptionService.GetMySubscriptionAsync(userId);
+        var sub = await subscriptionService.GetSubscriptionAsync(userId);
 
-        // Status: 0 = Active, 1 = Trialing
-        if (sub == null || sub.Status > 1 || sub.CurrentPeriodEnd <= DateTime.UtcNow)
+        if (sub == null || (sub.Status != "active" && sub.Status != "trialing") || sub.CurrentPeriodEnd <= DateTime.UtcNow)
         {
             context.Result = new StatusCodeResult(403); // Forbidden
         }

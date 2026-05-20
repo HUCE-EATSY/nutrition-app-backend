@@ -1,6 +1,4 @@
-using nutrition_app_backend.Models.Users;
-
-namespace nutrition_app_backend.Models.Streaks;
+namespace nutrition_app_backend.Models.Users;
 
 public class UserStreak
 {
@@ -9,7 +7,6 @@ public class UserStreak
     public int LongestStreak { get; set; } = 0;
     public int FreezeCount { get; set; } = 0;
     public DateOnly? LastLogDate { get; set; }
-
-    // Navigation property
+    
     public User User { get; set; } = null!;
 }

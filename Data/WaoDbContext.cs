@@ -3,8 +3,7 @@ using nutrition_app_backend.Models.Diary;
 using nutrition_app_backend.Models.Foods;
 using nutrition_app_backend.Models.Users;
 using nutrition_app_backend.Models.Diaries;
-using nutrition_app_backend.Models.Streaks;
-using nutrition_app_backend.Models.Subscriptions;
+
 
 namespace nutrition_app_backend.Data;
 
@@ -32,7 +31,7 @@ public class WaoDbContext : DbContext
     public DbSet<MealType> MealTypes { get; set; } = null!;
     public DbSet<FoodLog> FoodLogs { get; set; } = null!;
 
-    // Phase 3: Streaks & Subscriptions
+    // Streak & Subscription Group
     public DbSet<UserStreak> UserStreaks { get; set; } = null!;
     public DbSet<StreakFreezeTransaction> StreakFreezeTransactions { get; set; } = null!;
     public DbSet<SubscriptionPlan> SubscriptionPlans { get; set; } = null!;
@@ -282,15 +281,14 @@ public class WaoDbContext : DbContext
                   .OnDelete(DeleteBehavior.Restrict);
         });
 
-        // --- GROUP 4: PHASE 3 - STREAKS & SUBSCRIPTIONS ---
+        // --- GROUP 4: STREAKS & SUBSCRIPTIONS ---
         modelBuilder.Entity<UserStreak>(entity =>
         {
             entity.ToTable("user_streaks");
             entity.HasKey(e => e.UserId);
             entity.Property(e => e.UserId).HasColumnType("CHAR(36)");
-            
             entity.HasOne(d => d.User)
-                  .WithOne()
+                  .WithOne(p => p.Streak)
                   .HasForeignKey<UserStreak>(d => d.UserId)
                   .OnDelete(DeleteBehavior.Cascade);
         });
@@ -301,11 +299,14 @@ public class WaoDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id).HasColumnType("CHAR(36)");
             entity.Property(e => e.UserId).HasColumnType("CHAR(36)");
-            
-            entity.HasIndex(e => new { e.UserId, e.ProtectedDate }).IsUnique().HasDatabaseName("idx_freeze_user");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+
+            entity.HasIndex(e => new { e.UserId, e.ProtectedDate })
+                  .IsUnique()
+                  .HasDatabaseName("uq_freeze_date");
 
             entity.HasOne(d => d.User)
-                  .WithMany()
+                  .WithMany(p => p.StreakFreezeTransactions)
                   .HasForeignKey(d => d.UserId)
                   .OnDelete(DeleteBehavior.Cascade);
         });
@@ -314,6 +315,8 @@ public class WaoDbContext : DbContext
         {
             entity.ToTable("subscription_plans");
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasMaxLength(50);
+            entity.Property(e => e.Price).HasPrecision(18, 2);
         });
 
         modelBuilder.Entity<Subscription>(entity =>
@@ -322,14 +325,16 @@ public class WaoDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id).HasColumnType("CHAR(36)");
             entity.Property(e => e.UserId).HasColumnType("CHAR(36)");
-            
+            entity.Property(e => e.PlanId).HasMaxLength(50);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)");
+
             entity.HasIndex(e => new { e.UserId, e.Status }).HasDatabaseName("idx_sub_user_status");
 
             entity.HasOne(d => d.User)
-                  .WithMany()
+                  .WithMany(p => p.Subscriptions)
                   .HasForeignKey(d => d.UserId)
                   .OnDelete(DeleteBehavior.Cascade);
-            
             entity.HasOne(d => d.Plan)
                   .WithMany(p => p.Subscriptions)
                   .HasForeignKey(d => d.PlanId)
@@ -342,7 +347,7 @@ public class WaoDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id).HasColumnType("CHAR(36)");
             entity.Property(e => e.SubscriptionId).HasColumnType("CHAR(36)");
-            
+            entity.Property(e => e.ReceivedAt).HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
             entity.HasIndex(e => new { e.SubscriptionId, e.ReceivedAt }).HasDatabaseName("idx_sub_event");
 
             entity.HasOne(d => d.Subscription)
@@ -373,9 +378,9 @@ public class WaoDbContext : DbContext
         );
 
         modelBuilder.Entity<SubscriptionPlan>().HasData(
-            new SubscriptionPlan { Id = 1, Name = "Free", DurationDays = 0 },
-            new SubscriptionPlan { Id = 2, Name = "Premium Monthly", DurationDays = 30 },
-            new SubscriptionPlan { Id = 3, Name = "Premium Yearly", DurationDays = 365 }
+            new SubscriptionPlan { Id = "free", Name = "Free Plan", DurationDays = 99999, Price = 0.00m },
+            new SubscriptionPlan { Id = "premium_monthly", Name = "Premium Monthly", DurationDays = 30, Price = 9.99m },
+            new SubscriptionPlan { Id = "premium_yearly", Name = "Premium Yearly", DurationDays = 365, Price = 99.99m }
         );
     }
 }

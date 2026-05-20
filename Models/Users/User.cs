@@ -20,4 +20,8 @@ public class User
     public ICollection<WeightLog> WeightLogs { get; set; } = new List<WeightLog>();
     public ICollection<FoodLog> FoodLogs { get; set; } = new List<FoodLog>();
     public ICollection<FoodItem> CreatedFoods { get; set; } = new List<FoodItem>();
+
+    public UserStreak? Streak { get; set; }
+    public ICollection<StreakFreezeTransaction> StreakFreezeTransactions { get; set; } = new List<StreakFreezeTransaction>();
+    public ICollection<Subscription> Subscriptions { get; set; } = new List<Subscription>();
 }
