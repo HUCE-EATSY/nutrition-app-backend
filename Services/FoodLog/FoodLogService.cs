@@ -2,8 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using nutrition_app_backend.Data;
 using nutrition_app_backend.DTOs.Diaries;
 using nutrition_app_backend.Exceptions;
+using nutrition_app_backend.Enums;
 using AutoMapper;
-
 namespace nutrition_app_backend.Services.FoodLog;
 
 public class FoodLogService : IFoodLogService
@@ -35,7 +35,7 @@ public class FoodLogService : IFoodLogService
         if (food == null)
             throw new NotFoundException("Không tìm thấy món ăn.");
 
-        if (food.Status == 2)
+        if (food.Status == FoodStatus.Rejected)
             throw new BusinessException("FOOD_REJECTED", "Món ăn này đã bị từ chối, không thể tạo log.");
 
         // Validate meal type

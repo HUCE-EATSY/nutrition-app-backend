@@ -6,6 +6,7 @@ using nutrition_app_backend.Exceptions;
 using nutrition_app_backend.Models.Foods;
 using nutrition_app_backend.Services.Storage;
 using AutoMapper;
+using nutrition_app_backend.Enums;
 
 namespace nutrition_app_backend.Services.Food;
 
@@ -32,7 +33,7 @@ public class FoodService : IFoodService
         var userIdStr = currentUserId?.ToString() ?? "";
         var offset = (request.Page - 1) * request.PageSize;
 
-        var whereClause = "(fi.Status = 1 OR (fi.Status = 0 AND fi.CreatedBy = @userId))";
+        var whereClause = $"(fi.Status = {(byte)FoodStatus.Approved} OR (fi.Status = {(byte)FoodStatus.Pending} AND fi.CreatedBy = @userId))";
 
         if (request.CategoryId.HasValue)
         {
@@ -74,7 +75,7 @@ public class FoodService : IFoodService
                 fii.StorageProvider AS ImageStorageProvider
             FROM food_items fi
             LEFT JOIN food_nutrition fn ON fn.FoodItemId = fi.Id
-            LEFT JOIN food_item_images fii ON fi.Source != 3 AND fii.Id = fi.ActiveImageId
+            LEFT JOIN food_item_images fii ON fi.Source != {(byte)FoodSource.Community} AND fii.Id = fi.ActiveImageId
             WHERE {whereClause}
             ORDER BY fi.CreatedAt DESC
             LIMIT @limit OFFSET @offset";
@@ -104,7 +105,7 @@ public class FoodService : IFoodService
                     ? null
                     : reader.GetString(reader.GetOrdinal("ImageStorageProvider"));
                 
-                string? resolvedImageUrl = source == 3
+                string? resolvedImageUrl = source == (byte)FoodSource.Community
                     ? thumbnailUrl
                     : (imageStoragePath != null ? _storage.BuildUrl(imageStoragePath) : null);
 
@@ -159,9 +160,9 @@ public class FoodService : IFoodService
         var userIdStr = currentUserId?.ToString() ?? "";
         var offset = (request.Page - 1) * request.PageSize;
 
-        var whereClause = @"
+        var whereClause = $@"
             MATCH(fi.NameVi, fi.NameEn) AGAINST (@searchTerm IN BOOLEAN MODE)
-            AND (fi.Status = 1 OR (fi.Status = 0 AND fi.CreatedBy = @userId))";
+            AND (fi.Status = {(byte)FoodStatus.Approved} OR (fi.Status = {(byte)FoodStatus.Pending} AND fi.CreatedBy = @userId))";
 
         if (request.CategoryId.HasValue)
         {
@@ -204,7 +205,7 @@ public class FoodService : IFoodService
                 fii.StorageProvider AS ImageStorageProvider
             FROM food_items fi
             LEFT JOIN food_nutrition fn ON fn.FoodItemId = fi.Id
-            LEFT JOIN food_item_images fii ON fi.Source != 3 AND fii.Id = fi.ActiveImageId
+            LEFT JOIN food_item_images fii ON fi.Source != {(byte)FoodSource.Community} AND fii.Id = fi.ActiveImageId
             WHERE {whereClause}
             ORDER BY MATCH(fi.NameVi, fi.NameEn) AGAINST (@searchTerm2 IN BOOLEAN MODE) DESC
             LIMIT @limit OFFSET @offset";
@@ -236,7 +237,7 @@ public class FoodService : IFoodService
                     ? null
                     : reader.GetString(reader.GetOrdinal("ImageStorageProvider"));
                 
-                string? resolvedImageUrl = source == 3
+                string? resolvedImageUrl = source == (byte)FoodSource.Community
                     ? thumbnailUrl
                     : (imageStoragePath != null ? _storage.BuildUrl(imageStoragePath) : null);
 
@@ -325,7 +326,7 @@ public class FoodService : IFoodService
             .Include(f => f.Category)
             .Include(f => f.Nutrition)
             .Include(f => f.ActiveImage)
-            .FirstOrDefaultAsync(f => f.Barcode == barcode && f.Status == 1);
+            .FirstOrDefaultAsync(f => f.Barcode == barcode && f.Status == FoodStatus.Approved);
 
         if (food == null)
             throw new NotFoundException("Không tìm thấy sản phẩm với mã vạch này.");
@@ -359,8 +360,8 @@ public class FoodService : IFoodService
             NameVi = request.NameVi,
             NameEn = request.NameEn,
             CategoryId = request.CategoryId,
-            Source = 3, // community
-            Status = 0, // pending
+            Source = FoodSource.Community, // community
+            Status = FoodStatus.Pending, // pending
             ServingSizeG = request.ServingSizeG,
             ServingUnitVi = request.ServingUnitVi,
             Barcode = request.Barcode,
@@ -464,8 +465,8 @@ public class FoodService : IFoodService
             NameVi = request.NameVi,
             NameEn = request.NameEn,
             CategoryId = request.CategoryId,
-            Source = 3, // Community/User
-            Status = 0, // Pending/Private
+            Source = FoodSource.Community, // Community/User
+            Status = FoodStatus.Pending, // Pending/Private
             ServingSizeG = totalWeightG > 0 ? totalWeightG : 100, // Fallback if weight is 0
             ServingUnitVi = request.ServingUnitVi,
             CreatedBy = userId,

@@ -4,6 +4,7 @@ using nutrition_app_backend.DTOs.Foods;
 using nutrition_app_backend.Models.Diaries;
 using nutrition_app_backend.Models.Foods;
 using nutrition_app_backend.Services.Storage;
+using nutrition_app_backend.Enums;
 
 namespace nutrition_app_backend.Mappings;
 
@@ -23,7 +24,7 @@ public class FoodItemImageUrlResolver : IValueResolver<FoodItem, FoodDetailRespo
 
     public string? Resolve(FoodItem src, FoodDetailResponse dest, string? destMember, ResolutionContext context)
     {
-        if (src.Source == 3)
+        if (src.Source == FoodSource.Community)
             return src.ThumbnailUrl; // Community: full URL đã lưu sẵn
 
         if (src.ActiveImage == null)
@@ -47,7 +48,7 @@ public class FoodLogImageUrlResolver : IValueResolver<FoodLog, FoodLogResponse, 
 
     public string? Resolve(FoodLog src, FoodLogResponse dest, string? destMember, ResolutionContext context)
     {
-        if (src.FoodItem.Source == 3)
+        if (src.FoodItem.Source == FoodSource.Community)
             return src.FoodItem.ThumbnailUrl;
 
         if (src.FoodItem.ActiveImage == null)
@@ -71,7 +72,7 @@ public class FoodComponentImageUrlResolver : IValueResolver<FoodItemComponent, F
 
     public string? Resolve(FoodItemComponent src, FoodComponentResponse dest, string? destMember, ResolutionContext context)
     {
-        if (src.ChildFood.Source == 3)
+        if (src.ChildFood.Source == FoodSource.Community)
             return src.ChildFood.ThumbnailUrl;
 
         if (src.ChildFood.ActiveImage == null)
