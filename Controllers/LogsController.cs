@@ -10,7 +10,7 @@ namespace nutrition_app_backend.Controllers;
 
 [ApiController]
 [Route("api/logs")]
-[AllowAnonymous]
+[Authorize]
 public class LogsController : ControllerBase
 {
     private readonly IFoodLogService _foodLogService;
@@ -28,20 +28,8 @@ public class LogsController : ControllerBase
     /// Get food logs for a specific date, grouped by meal type.
     /// </summary>
     [HttpGet("food")]
-    [AllowAnonymous]
     public async Task<ActionResult<ApiResponse<DailyFoodLogsResponse>>> GetDailyFoodLogs([FromQuery] DateOnly date)
     {
-        // For anonymous users, return empty data
-        if (!User.Identity?.IsAuthenticated ?? true)
-        {
-            var emptyResult = new DailyFoodLogsResponse
-            {
-                Date = date,
-                Meals = new List<MealGroupDto>()
-            };
-            return Ok(ApiResponse<DailyFoodLogsResponse>.Success(emptyResult, "Lấy nhật ký ăn uống thành công"));
-        }
-
         Guid userId = User.GetUserId();
         var result = await _foodLogService.GetDailyLogsAsync(userId, date);
 

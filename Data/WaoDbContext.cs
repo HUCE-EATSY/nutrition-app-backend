@@ -4,6 +4,7 @@ using nutrition_app_backend.Models.Foods;
 using nutrition_app_backend.Models.Diaries;
 using nutrition_app_backend.Models.Exercises;
 using nutrition_app_backend.Models.Notifications;
+using nutrition_app_backend.Extensions;
 
 namespace nutrition_app_backend.Data;
 
@@ -431,5 +432,14 @@ public class WaoDbContext : DbContext
             new NotificationType { Id = 6, Code = "DAILY_SUMMARY", NameVi = "Tổng kết ngày", NameEn = "Daily Summary", Description = "Tổng kết dinh dưỡng và tập luyện trong ngày" },
             new NotificationType { Id = 7, Code = "WEEKLY_REPORT", NameVi = "Báo cáo tuần", NameEn = "Weekly Report", Description = "Báo cáo tiến độ hàng tuần" }
         );
+    }
+
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        configurationBuilder.Properties<DateTime>()
+            .HaveConversion<UtcDateTimeConverter>();
+
+        configurationBuilder.Properties<DateTime?>()
+            .HaveConversion<NullableUtcDateTimeConverter>();
     }
 }

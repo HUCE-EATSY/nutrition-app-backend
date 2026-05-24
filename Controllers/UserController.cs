@@ -9,7 +9,7 @@ namespace nutrition_app_backend.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[AllowAnonymous]
+[Authorize]
 public class UserController : ControllerBase
 {
     private readonly IUserService _userService;
@@ -20,14 +20,8 @@ public class UserController : ControllerBase
     }
 
     [HttpPost("onboarding")]
-    [AllowAnonymous]
     public async Task<ActionResult<ApiResponse<UserGoalResponse>>> OnboardUser([FromBody] OnboardingRequest request)
     {
-        if (!User.Identity?.IsAuthenticated ?? true)
-        {
-            return Ok(ApiResponse<UserGoalResponse>.Success(null!, "Yêu cầu đăng nhập"));
-        }
-
         Guid userId = User.GetUserId();
         var result = await _userService.OnboardUserAsync(userId, request);
 
@@ -35,14 +29,8 @@ public class UserController : ControllerBase
     }
 
     [HttpPut("profile")]
-    [AllowAnonymous]
     public async Task<ActionResult<ApiResponse<UserProfileResponse>>> UpdateProfile([FromBody] UpdateProfileRequest request)
     {
-        if (!User.Identity?.IsAuthenticated ?? true)
-        {
-            return Ok(ApiResponse<UserProfileResponse>.Success(null!, "Yêu cầu đăng nhập"));
-        }
-
         Guid userId = User.GetUserId();
         var result = await _userService.UpdateUserProfileAsync(userId, request);
 
@@ -50,14 +38,8 @@ public class UserController : ControllerBase
     }
 
     [HttpPut("goal")]
-    [AllowAnonymous]
     public async Task<ActionResult<ApiResponse<UserGoalUpdateResponse>>> UpdateGoal([FromBody] UpdateUserGoalRequest request)
     {
-        if (!User.Identity?.IsAuthenticated ?? true)
-        {
-            return Ok(ApiResponse<UserGoalUpdateResponse>.Success(null!, "Yêu cầu đăng nhập"));
-        }
-
         Guid userId = User.GetUserId();
         var result = await _userService.UpdateUserGoalAsync(userId, request);
 
@@ -65,23 +47,8 @@ public class UserController : ControllerBase
     }
 
     [HttpGet("info")]
-    [AllowAnonymous]
     public async Task<ActionResult<ApiResponse<GetUserInfoResponse>>> GetUserInfo()
     {
-        if (!User.Identity?.IsAuthenticated ?? true)
-        {
-            // Return mock data for anonymous users
-            var mockData = new GetUserInfoResponse
-            {
-                UserId = Guid.Empty,
-                Profile = null,
-                ActiveGoal = null,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            };
-            return Ok(ApiResponse<GetUserInfoResponse>.Success(mockData, "Lấy thông tin thành công"));
-        }
-
         Guid userId = User.GetUserId();
         var result = await _userService.GetUserInfoAsync(userId);
 
@@ -94,14 +61,8 @@ public class UserController : ControllerBase
     /// </summary>
     [HttpPost("avatar")]
     [Consumes("multipart/form-data")]
-    [AllowAnonymous]
     public async Task<ActionResult<ApiResponse<object>>> UploadAvatar(IFormFile avatar)
     {
-        if (!User.Identity?.IsAuthenticated ?? true)
-        {
-            return Ok(ApiResponse<object>.Success(null!, "Yêu cầu đăng nhập"));
-        }
-
         Guid userId = User.GetUserId();
         var avatarUrl = await _userService.UploadAvatarAsync(userId, avatar);
 
@@ -114,14 +75,8 @@ public class UserController : ControllerBase
     /// Frontend nên xóa token cục bộ và điều hướng về màn hình đăng nhập sau khi nhận 204.
     /// </summary>
     [HttpDelete("account")]
-    [AllowAnonymous]
     public async Task<ActionResult> DeleteAccount()
     {
-        if (!User.Identity?.IsAuthenticated ?? true)
-        {
-            return NoContent();
-        }
-
         Guid userId = User.GetUserId();
         await _userService.DeleteAccountAsync(userId);
 
