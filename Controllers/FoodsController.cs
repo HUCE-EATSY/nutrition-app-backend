@@ -23,12 +23,12 @@ public class FoodsController : ControllerBase
     /// Get a paginated list of foods (for default display, no search).
     /// </summary>
     [HttpGet]
-    public async Task<ActionResult<ApiResponse<PaginatedResponse<FoodSearchResponse>>>> GetList([FromQuery] FoodListRequest request)
+    public async Task<ActionResult<ApiResponse<CursorPaginatedResponse<FoodSearchResponse>>>> GetList([FromQuery] FoodListRequest request)
     {
         Guid userId = User.GetUserId();
         var result = await _foodService.GetListAsync(request, userId);
 
-        return Ok(ApiResponse<PaginatedResponse<FoodSearchResponse>>.Success(result, "Lấy danh sách thành công"));
+        return Ok(ApiResponse<CursorPaginatedResponse<FoodSearchResponse>>.Success(result, "Lấy danh sách thành công"));
     }
 
     /// <summary>

@@ -80,6 +80,15 @@ public class UserService : IUserService
         decimal[] activityMultipliers = { 0, 1.2m, 1.375m, 1.55m, 1.725m, 1.9m };
         decimal tdee = bmr * activityMultipliers[request.ActivityLevel];
 
+        // Calculate dynamic target calories based on goal type: 1 = Lose (-500), 2 = Gain (+500), 3 = Maintain (+0)
+        decimal targetCalories = request.GoalType switch
+        {
+            1 => tdee - 500,
+            2 => tdee + 500,
+            _ => tdee
+        };
+        if (targetCalories < 1200) targetCalories = 1200; // Safe minimum boundary
+
         // 3. KHỞI TẠO GOAL
         var goal = new UserGoal
         {
@@ -87,12 +96,13 @@ public class UserService : IUserService
             WeightKg = request.WeightKg,
             GoalWeightKg = request.GoalWeightKg,
             ActivityLevel = request.ActivityLevel,
+            GoalType = request.GoalType,
             BmrKcal = bmr,
             TdeeKcal = tdee,
-            TargetCalories = tdee - 500,
-            TargetProteinG = (tdee - 500) * 0.3m / 4,
-            TargetCarbsG = (tdee - 500) * 0.4m / 4,
-            TargetFatG = (tdee - 500) * 0.3m / 9,
+            TargetCalories = targetCalories,
+            TargetProteinG = targetCalories * 0.3m / 4,
+            TargetCarbsG = targetCalories * 0.4m / 4,
+            TargetFatG = targetCalories * 0.3m / 9,
             IsActive = true
         };
         _dbContext.UserGoals.Add(goal);
@@ -142,15 +152,24 @@ public class UserService : IUserService
             decimal[] activityMultipliers = { 0, 1.2m, 1.375m, 1.55m, 1.725m, 1.9m };
             decimal tdee = bmr * activityMultipliers[request.ActivityLevel];
 
+            // Calculate dynamic target calories based on goal type stored in DB
+            decimal targetCalories = goal.GoalType switch
+            {
+                1 => tdee - 500,
+                2 => tdee + 500,
+                _ => tdee
+            };
+            if (targetCalories < 1200) targetCalories = 1200; // Safe minimum boundary
+
             // Cập nhật goal
             goal.WeightKg = request.WeightKg;
             goal.ActivityLevel = request.ActivityLevel;
             goal.BmrKcal = bmr;
             goal.TdeeKcal = tdee;
-            goal.TargetCalories = tdee - 500;
-            goal.TargetProteinG = (tdee - 500) * 0.3m / 4;
-            goal.TargetCarbsG = (tdee - 500) * 0.4m / 4;
-            goal.TargetFatG = (tdee - 500) * 0.3m / 9;
+            goal.TargetCalories = targetCalories;
+            goal.TargetProteinG = targetCalories * 0.3m / 4;
+            goal.TargetCarbsG = targetCalories * 0.4m / 4;
+            goal.TargetFatG = targetCalories * 0.3m / 9;
         }
 
         await _dbContext.SaveChangesAsync();

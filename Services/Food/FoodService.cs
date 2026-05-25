@@ -28,123 +28,111 @@ public class FoodService : IFoodService
     /// - Approved items (status=1) visible to everyone.
     /// - Pending items (status=0) visible only to the creator.
     /// </summary>
-    public async Task<PaginatedResponse<FoodSearchResponse>> GetListAsync(FoodListRequest request, Guid? currentUserId)
+    private static string EncodeCursor(DateTime createdAt, Guid id)
     {
-        var userIdStr = currentUserId?.ToString() ?? "";
-        var offset = (request.Page - 1) * request.PageSize;
+        var plainText = $"{createdAt.Ticks}_{id}";
+        var bytes = System.Text.Encoding.UTF8.GetBytes(plainText);
+        return Convert.ToBase64String(bytes);
+    }
 
-        var whereClause = $"(fi.Status = {(byte)FoodStatus.Approved} OR (fi.Status = {(byte)FoodStatus.Pending} AND fi.CreatedBy = @userId))";
+    private static (DateTime createdAt, Guid id)? DecodeCursor(string? cursor)
+    {
+        if (string.IsNullOrEmpty(cursor)) return null;
+        try
+        {
+            var bytes = Convert.FromBase64String(cursor);
+            var plainText = System.Text.Encoding.UTF8.GetString(bytes);
+            var parts = plainText.Split('_');
+            if (parts.Length == 2 && long.TryParse(parts[0], out long ticks) && Guid.TryParse(parts[1], out Guid id))
+            {
+                return (new DateTime(ticks, DateTimeKind.Utc), id);
+            }
+        }
+        catch
+        {
+            // Ignore invalid cursor
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Paginated list of foods with cursor pagination.
+    /// - Approved items (status=1) visible to everyone.
+    /// - Pending items (status=0) visible only to the creator.
+    /// </summary>
+    public async Task<CursorPaginatedResponse<FoodSearchResponse>> GetListAsync(FoodListRequest request, Guid? currentUserId)
+    {
+        var query = _db.FoodItems.AsQueryable();
+
+        // Filter by Status and Creator (Approved items are visible to everyone, Pending items only to the creator)
+        query = query.Where(fi => fi.Status == FoodStatus.Approved 
+                               || (fi.Status == FoodStatus.Pending && fi.CreatedBy == currentUserId));
 
         if (request.CategoryId.HasValue)
         {
-            whereClause += " AND fi.CategoryId = @categoryId";
+            query = query.Where(fi => fi.CategoryId == request.CategoryId.Value);
         }
 
-        var countSql = $"SELECT COUNT(*) FROM food_items fi WHERE {whereClause}";
-
-        await using var connection = _db.Database.GetDbConnection();
-        await connection.OpenAsync();
-
-        int totalCount;
-        await using (var countCmd = connection.CreateCommand())
+        // Apply cursor filter
+        var cursorData = DecodeCursor(request.Cursor);
+        if (cursorData.HasValue)
         {
-            countCmd.CommandText = countSql;
-            countCmd.Parameters.Add(new MySqlParameter("@userId", userIdStr));
-            if (request.CategoryId.HasValue)
-                countCmd.Parameters.Add(new MySqlParameter("@categoryId", request.CategoryId.Value));
-
-            totalCount = Convert.ToInt32(await countCmd.ExecuteScalarAsync());
+            var (lastCreatedAt, lastId) = cursorData.Value;
+            var lastIdStr = lastId.ToString();
+            
+            query = query.Where(fi => fi.CreatedAt < lastCreatedAt 
+                                   || (fi.CreatedAt == lastCreatedAt && fi.Id.ToString().CompareTo(lastIdStr) < 0));
         }
 
-        var dataSql = $@"
-            SELECT
-                fi.Id                AS Id,
-                fi.NameVi           AS NameVi,
-                fi.NameEn           AS NameEn,
-                fi.CategoryId       AS CategoryId,
-                fi.Source            AS Source,
-                fi.ServingSizeG    AS ServingSizeG,
-                fi.ServingUnitVi   AS ServingUnitVi,
-                fi.ThumbnailUrl     AS ThumbnailUrl,
-                fi.ActiveImageId   AS ActiveImageId,
-                fn.CaloriesKcal     AS CaloriesKcal,
-                fn.ProteinG         AS ProteinG,
-                fn.CarbsG           AS CarbsG,
-                fn.FatG             AS FatG,
-                fii.StoragePath     AS ImageStoragePath,
-                fii.StorageProvider AS ImageStorageProvider
-            FROM food_items fi
-            LEFT JOIN food_nutrition fn ON fn.FoodItemId = fi.Id
-            LEFT JOIN food_item_images fii ON fi.Source != {(byte)FoodSource.Community} AND fii.Id = fi.ActiveImageId
-            WHERE {whereClause}
-            ORDER BY fi.CreatedAt DESC
-            LIMIT @limit OFFSET @offset";
+        // Order by CreatedAt DESC and Id DESC as tie-breaker
+        query = query.OrderByDescending(fi => fi.CreatedAt)
+                     .ThenByDescending(fi => fi.Id);
 
-        var items = new List<FoodSearchResponse>();
+        // Fetch PageSize + 1 items to determine if there is a next page
+        var foodItems = await query
+            .Include(fi => fi.Nutrition)
+            .Include(fi => fi.ActiveImage)
+            .Take(request.PageSize + 1)
+            .ToListAsync();
 
-        await using (var dataCmd = connection.CreateCommand())
+        var hasMore = foodItems.Count > request.PageSize;
+        var itemsToReturn = foodItems.Take(request.PageSize).ToList();
+
+        var items = itemsToReturn.Select(fi =>
         {
-            dataCmd.CommandText = dataSql;
-            dataCmd.Parameters.Add(new MySqlParameter("@userId", userIdStr));
-            dataCmd.Parameters.Add(new MySqlParameter("@limit", request.PageSize));
-            dataCmd.Parameters.Add(new MySqlParameter("@offset", offset));
-            if (request.CategoryId.HasValue)
-                dataCmd.Parameters.Add(new MySqlParameter("@categoryId", request.CategoryId.Value));
+            string? resolvedImageUrl = fi.Source == FoodSource.Community
+                ? fi.ThumbnailUrl
+                : (fi.ActiveImage != null ? _storage.BuildUrl(fi.ActiveImage.StoragePath) : null);
 
-            await using var reader = await dataCmd.ExecuteReaderAsync();
-            while (await reader.ReadAsync())
+            return new FoodSearchResponse
             {
-                var source = reader.GetByte(reader.GetOrdinal("Source"));
-                var thumbnailUrl = reader.IsDBNull(reader.GetOrdinal("ThumbnailUrl"))
-                    ? null
-                    : reader.GetString(reader.GetOrdinal("ThumbnailUrl"));
-                var imageStoragePath = reader.IsDBNull(reader.GetOrdinal("ImageStoragePath"))
-                    ? null
-                    : reader.GetString(reader.GetOrdinal("ImageStoragePath"));
-                var imageStorageProvider = reader.IsDBNull(reader.GetOrdinal("ImageStorageProvider"))
-                    ? null
-                    : reader.GetString(reader.GetOrdinal("ImageStorageProvider"));
-                
-                string? resolvedImageUrl = source == (byte)FoodSource.Community
-                    ? thumbnailUrl
-                    : (imageStoragePath != null ? _storage.BuildUrl(imageStoragePath) : null);
+                Id = fi.Id,
+                NameVi = fi.NameVi,
+                NameEn = fi.NameEn,
+                CategoryId = fi.CategoryId,
+                Source = (byte)fi.Source,
+                ServingSizeG = fi.ServingSizeG,
+                ServingUnitVi = fi.ServingUnitVi ?? "g",
+                CaloriesKcal = fi.Nutrition?.CaloriesKcal,
+                ProteinG = fi.Nutrition?.ProteinG,
+                CarbsG = fi.Nutrition?.CarbsG,
+                FatG = fi.Nutrition?.FatG,
+                ImageUrl = resolvedImageUrl
+            };
+        }).ToList();
 
-                items.Add(new FoodSearchResponse
-                {
-                    Id = reader.GetGuid(reader.GetOrdinal("Id")),
-                    NameVi = reader.GetString(reader.GetOrdinal("NameVi")),
-                    NameEn = reader.IsDBNull(reader.GetOrdinal("NameEn"))
-                        ? null
-                        : reader.GetString(reader.GetOrdinal("NameEn")),
-                    CategoryId = reader.GetByte(reader.GetOrdinal("CategoryId")),
-                    Source = source,
-                    ServingSizeG = reader.GetDecimal(reader.GetOrdinal("ServingSizeG")),
-                    ServingUnitVi = reader.IsDBNull(reader.GetOrdinal("ServingUnitVi"))
-                        ? "g"
-                        : reader.GetString(reader.GetOrdinal("ServingUnitVi")),
-                    CaloriesKcal = reader.IsDBNull(reader.GetOrdinal("CaloriesKcal"))
-                        ? null
-                        : reader.GetDecimal(reader.GetOrdinal("CaloriesKcal")),
-                    ProteinG = reader.IsDBNull(reader.GetOrdinal("ProteinG"))
-                        ? null
-                        : reader.GetDecimal(reader.GetOrdinal("ProteinG")),
-                    CarbsG = reader.IsDBNull(reader.GetOrdinal("CarbsG"))
-                        ? null
-                        : reader.GetDecimal(reader.GetOrdinal("CarbsG")),
-                    FatG = reader.IsDBNull(reader.GetOrdinal("FatG"))
-                        ? null
-                        : reader.GetDecimal(reader.GetOrdinal("FatG")),
-                    ImageUrl = resolvedImageUrl
-                });
-            }
+        string? nextCursor = null;
+        if (hasMore && itemsToReturn.Any())
+        {
+            var lastItem = itemsToReturn.Last();
+            nextCursor = EncodeCursor(lastItem.CreatedAt, lastItem.Id);
         }
 
-        return new PaginatedResponse<FoodSearchResponse>
+        return new CursorPaginatedResponse<FoodSearchResponse>
         {
             Items = items,
-            Page = request.Page,
-            PageSize = request.PageSize,
-            TotalCount = totalCount
+            NextCursor = nextCursor,
+            PageSize = request.PageSize
         };
     }
 

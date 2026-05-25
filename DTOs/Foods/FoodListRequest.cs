@@ -6,9 +6,8 @@ public class FoodListRequest
 {
     public byte? CategoryId { get; set; }
 
-    [Range(1, int.MaxValue)]
-    public int Page { get; set; } = 1;
+    public string? Cursor { get; set; }
 
-    [Range(1, 50)]
+    [Range(1, 100)]
     public int PageSize { get; set; } = 20;
 }

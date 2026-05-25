@@ -220,18 +220,14 @@ public class FoodLogService : IFoodLogService
 
     // --- Private Helpers ---
 
-    /// <summary>
-    /// Calculate snapshot macros using Atwater (4-9-4) formula, scaled by ratio.
-    /// Always uses computed calories, not the stored value.
-    /// </summary>
     private static (decimal calories, decimal protein, decimal carbs, decimal fat)
         CalculateSnapshotMacros(Models.Foods.FoodNutrition nutrition, decimal ratio)
     {
         var protein = Math.Round(nutrition.ProteinG * ratio, 2);
         var carbs = Math.Round(nutrition.CarbsG * ratio, 2);
         var fat = Math.Round(nutrition.FatG * ratio, 2);
-        // Always use Atwater formula — never trust stored calories
-        var calories = Math.Round((protein * 4m) + (carbs * 4m) + (fat * 9m), 2);
+        // Scale the stored calories linearly to match frontend's logic and respect food label calories
+        var calories = Math.Round(nutrition.CaloriesKcal * ratio, 2);
 
         return (calories, protein, carbs, fat);
     }
