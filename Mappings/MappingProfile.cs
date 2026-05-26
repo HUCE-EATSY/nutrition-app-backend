@@ -46,5 +46,7 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.MealTypeName, opt => opt.MapFrom(src => src.MealType.NameVi));
 
         CreateMap<WeightLog, WeightLogResponse>();
+        CreateMap<StepLog, StepLogResponse>();
+        CreateMap<UserHealthConnection, UserHealthConnectionResponse>();
     }
 }

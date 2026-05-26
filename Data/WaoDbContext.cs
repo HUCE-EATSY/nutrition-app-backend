@@ -30,6 +30,8 @@ public class WaoDbContext : DbContext
     // Logging Group
     public DbSet<MealType> MealTypes { get; set; } = null!;
     public DbSet<FoodLog> FoodLogs { get; set; } = null!;
+    public DbSet<StepLog> StepLogs { get; set; } = null!;
+    public DbSet<UserHealthConnection> UserHealthConnections { get; set; } = null!;
 
     // Exercise Group
     public DbSet<ExerciseCategory> ExerciseCategories { get; set; } = null!;
@@ -114,6 +116,32 @@ public class WaoDbContext : DbContext
 
             entity.HasOne(d => d.User)
                   .WithMany(p => p.WeightLogs)
+                  .HasForeignKey(d => d.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<StepLog>(entity =>
+        {
+            entity.ToTable("step_logs");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UserId).HasColumnType("CHAR(36)");
+            entity.Property(e => e.CaloriesBurnedKcal).HasPrecision(8, 2);
+            entity.HasIndex(e => new { e.UserId, e.LogDate }).IsUnique().HasDatabaseName("idx_steps_user_date");
+
+            entity.HasOne(d => d.User)
+                  .WithMany(p => p.StepLogs)
+                  .HasForeignKey(d => d.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<UserHealthConnection>(entity =>
+        {
+            entity.ToTable("user_health_connections");
+            entity.HasKey(e => new { e.UserId, e.Provider });
+            entity.Property(e => e.UserId).HasColumnType("CHAR(36)");
+
+            entity.HasOne(d => d.User)
+                  .WithMany(p => p.HealthConnections)
                   .HasForeignKey(d => d.UserId)
                   .OnDelete(DeleteBehavior.Cascade);
         });

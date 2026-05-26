@@ -5,6 +5,7 @@ using nutrition_app_backend.DTOs.Diaries;
 using nutrition_app_backend.Extensions;
 using nutrition_app_backend.Services.FoodLog;
 using nutrition_app_backend.Services.WeightLog;
+using nutrition_app_backend.Services.StepLog;
 
 namespace nutrition_app_backend.Controllers;
 
@@ -15,11 +16,13 @@ public class LogsController : ControllerBase
 {
     private readonly IFoodLogService _foodLogService;
     private readonly IWeightLogService _weightLogService;
+    private readonly IStepLogService _stepLogService;
 
-    public LogsController(IFoodLogService foodLogService, IWeightLogService weightLogService)
+    public LogsController(IFoodLogService foodLogService, IWeightLogService weightLogService, IStepLogService stepLogService)
     {
         _foodLogService = foodLogService;
         _weightLogService = weightLogService;
+        _stepLogService = stepLogService;
     }
 
     // ========== FOOD LOGS ==========
@@ -122,5 +125,31 @@ public class LogsController : ControllerBase
         var result = await _weightLogService.UpdateAsync(userId, id, request);
 
         return Ok(ApiResponse<WeightLogResponse>.Success(result, "Cập nhật cân nặng thành công"));
+    }
+
+    // ========== STEP LOGS ==========
+
+    /// <summary>
+    /// Lưu / Cập nhật số bước chân trong ngày (Upsert Step Log)
+    /// </summary>
+    [HttpPost("steps")]
+    public async Task<ActionResult<ApiResponse<StepLogResponse>>> UpsertStepLog([FromBody] UpsertStepLogRequest request)
+    {
+        Guid userId = User.GetUserId();
+        var result = await _stepLogService.UpsertAsync(userId, request);
+
+        return Ok(ApiResponse<StepLogResponse>.Success(result, "Lưu thông tin bước chân thành công"));
+    }
+
+    /// <summary>
+    /// Lấy lịch sử bước chân theo khoảng thời gian
+    /// </summary>
+    [HttpGet("steps")]
+    public async Task<ActionResult<ApiResponse<List<StepLogResponse>>>> GetStepsTimeline([FromQuery] DateOnly from, [FromQuery] DateOnly to)
+    {
+        Guid userId = User.GetUserId();
+        var result = await _stepLogService.GetTimelineAsync(userId, from, to);
+
+        return Ok(ApiResponse<List<StepLogResponse>>.Success(result, "Lấy lịch sử bước chân thành công"));
     }
 }
