@@ -19,5 +19,8 @@ public record OnboardingRequest(
     decimal GoalWeightKg,
     
     [Range(1, 5)]
-    byte ActivityLevel
+    byte ActivityLevel,
+
+    [Range(1, 3)]
+    byte GoalType
 );

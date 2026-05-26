@@ -9,7 +9,7 @@ namespace nutrition_app_backend.Controllers;
 
 [ApiController]
 [Route("api/exercises")]
-[AllowAnonymous]
+[Authorize]
 public class ExercisesController : ControllerBase
 {
     private readonly IExerciseService _exerciseService;
@@ -23,7 +23,6 @@ public class ExercisesController : ControllerBase
     /// Lấy danh sách danh mục bài tập và các bài tập
     /// </summary>
     [HttpGet("categories")]
-    [AllowAnonymous]
     public async Task<ActionResult<ApiResponse<List<ExerciseCategoryResponse>>>> GetExerciseCategories()
     {
         var result = await _exerciseService.GetExerciseCategoriesAsync();
@@ -34,7 +33,6 @@ public class ExercisesController : ControllerBase
     /// Lấy chi tiết một bài tập
     /// </summary>
     [HttpGet("{id}")]
-    [AllowAnonymous]
     public async Task<ActionResult<ApiResponse<ExerciseResponse>>> GetExercise(Guid id)
     {
         var result = await _exerciseService.GetExerciseByIdAsync(id);
@@ -48,18 +46,7 @@ public class ExercisesController : ControllerBase
     [HttpPost("logs")]
     public async Task<ActionResult<ApiResponse<ExerciseLogResponse>>> CreateExerciseLog([FromBody] CreateExerciseLogRequest request)
     {
-        // For anonymous users, use a mock userId
-        var userId = User.Identity?.IsAuthenticated == true 
-            ? User.GetUserId() 
-            : Guid.Empty;
-            
-        if (userId == Guid.Empty)
-        {
-            // Anonymous users cannot create logs - return success but don't save
-            return StatusCode(StatusCodes.Status201Created,
-                ApiResponse<ExerciseLogResponse>.Success(null!, "Vui lòng đăng nhập để lưu nhật ký", "201"));
-        }
-        
+        var userId = User.GetUserId();
         var result = await _exerciseService.CreateExerciseLogAsync(userId, request);
 
         return StatusCode(StatusCodes.Status201Created,

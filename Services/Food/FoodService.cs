@@ -6,6 +6,7 @@ using nutrition_app_backend.Exceptions;
 using nutrition_app_backend.Models.Foods;
 using nutrition_app_backend.Services.Storage;
 using AutoMapper;
+using nutrition_app_backend.Enums;
 
 namespace nutrition_app_backend.Services.Food;
 
@@ -27,30 +28,135 @@ public class FoodService : IFoodService
     /// - Approved items (status=1) visible to everyone.
     /// - Pending items (status=0) visible only to the creator.
     /// </summary>
+    private static string EncodeCursor(DateTime createdAt, Guid id)
+    {
+        var plainText = $"{createdAt.Ticks}_{id}";
+        var bytes = System.Text.Encoding.UTF8.GetBytes(plainText);
+        return Convert.ToBase64String(bytes);
+    }
+
+    private static (DateTime createdAt, Guid id)? DecodeCursor(string? cursor)
+    {
+        if (string.IsNullOrEmpty(cursor)) return null;
+        try
+        {
+            var bytes = Convert.FromBase64String(cursor);
+            var plainText = System.Text.Encoding.UTF8.GetString(bytes);
+            var parts = plainText.Split('_');
+            if (parts.Length == 2 && long.TryParse(parts[0], out long ticks) && Guid.TryParse(parts[1], out Guid id))
+            {
+                return (new DateTime(ticks, DateTimeKind.Utc), id);
+            }
+        }
+        catch
+        {
+            // Ignore invalid cursor
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Paginated list of foods with cursor pagination.
+    /// - Approved items (status=1) visible to everyone.
+    /// - Pending items (status=0) visible only to the creator.
+    /// </summary>
+    public async Task<CursorPaginatedResponse<FoodSearchResponse>> GetListAsync(FoodListRequest request, Guid? currentUserId)
+    {
+        var query = _db.FoodItems.AsQueryable();
+
+        // Filter by Status and Creator (Approved items are visible to everyone, Pending items only to the creator)
+        query = query.Where(fi => fi.Status == FoodStatus.Approved 
+                               || (fi.Status == FoodStatus.Pending && fi.CreatedBy == currentUserId));
+
+        if (request.CategoryId.HasValue)
+        {
+            query = query.Where(fi => fi.CategoryId == request.CategoryId.Value);
+        }
+
+        // Apply cursor filter
+        var cursorData = DecodeCursor(request.Cursor);
+        if (cursorData.HasValue)
+        {
+            var (lastCreatedAt, lastId) = cursorData.Value;
+            var lastIdStr = lastId.ToString();
+            
+            query = query.Where(fi => fi.CreatedAt < lastCreatedAt 
+                                   || (fi.CreatedAt == lastCreatedAt && fi.Id.ToString().CompareTo(lastIdStr) < 0));
+        }
+
+        // Order by CreatedAt DESC and Id DESC as tie-breaker
+        query = query.OrderByDescending(fi => fi.CreatedAt)
+                     .ThenByDescending(fi => fi.Id);
+
+        // Fetch PageSize + 1 items to determine if there is a next page
+        var foodItems = await query
+            .Include(fi => fi.Nutrition)
+            .Include(fi => fi.ActiveImage)
+            .Take(request.PageSize + 1)
+            .ToListAsync();
+
+        var hasMore = foodItems.Count > request.PageSize;
+        var itemsToReturn = foodItems.Take(request.PageSize).ToList();
+
+        var items = itemsToReturn.Select(fi =>
+        {
+            string? resolvedImageUrl = fi.Source == FoodSource.Community
+                ? fi.ThumbnailUrl
+                : (fi.ActiveImage != null ? _storage.BuildUrl(fi.ActiveImage.StoragePath) : null);
+
+            return new FoodSearchResponse
+            {
+                Id = fi.Id,
+                NameVi = fi.NameVi,
+                NameEn = fi.NameEn,
+                CategoryId = fi.CategoryId,
+                Source = (byte)fi.Source,
+                ServingSizeG = fi.ServingSizeG,
+                ServingUnitVi = fi.ServingUnitVi ?? "g",
+                CaloriesKcal = fi.Nutrition?.CaloriesKcal,
+                ProteinG = fi.Nutrition?.ProteinG,
+                CarbsG = fi.Nutrition?.CarbsG,
+                FatG = fi.Nutrition?.FatG,
+                ImageUrl = resolvedImageUrl
+            };
+        }).ToList();
+
+        string? nextCursor = null;
+        if (hasMore && itemsToReturn.Any())
+        {
+            var lastItem = itemsToReturn.Last();
+            nextCursor = EncodeCursor(lastItem.CreatedAt, lastItem.Id);
+        }
+
+        return new CursorPaginatedResponse<FoodSearchResponse>
+        {
+            Items = items,
+            NextCursor = nextCursor,
+            PageSize = request.PageSize
+        };
+    }
+
     public async Task<PaginatedResponse<FoodSearchResponse>> SearchAsync(FoodSearchRequest request, Guid? currentUserId)
     {
         var searchTerm = request.Q.Trim();
         if (string.IsNullOrWhiteSpace(searchTerm))
             throw new BusinessException("EMPTY_SEARCH", "Từ khóa tìm kiếm không được để trống.");
 
-        // Append * for prefix matching in BOOLEAN MODE
         var booleanTerm = string.Join(" ", searchTerm.Split(' ', StringSplitOptions.RemoveEmptyEntries)
             .Select(w => $"+{w}*"));
 
         var userIdStr = currentUserId?.ToString() ?? "";
         var offset = (request.Page - 1) * request.PageSize;
 
-        // Build WHERE clause dynamically
-        var whereClause = @"
-            MATCH(fi.name_vi, fi.name_en) AGAINST (@searchTerm IN BOOLEAN MODE)
-            AND (fi.status = 1 OR (fi.status = 0 AND fi.created_by = @userId))";
+        var whereClause = $@"
+            MATCH(fi.NameVi, fi.NameEn) AGAINST (@searchTerm IN BOOLEAN MODE)
+            AND (fi.Status = {(byte)FoodStatus.Approved} OR (fi.Status = {(byte)FoodStatus.Pending} AND fi.CreatedBy = @userId))";
 
         if (request.CategoryId.HasValue)
         {
-            whereClause += " AND fi.category_id = @categoryId";
+            whereClause += " AND fi.CategoryId = @categoryId";
         }
 
-        // Count query
         var countSql = $"SELECT COUNT(*) FROM food_items fi WHERE {whereClause}";
 
         await using var connection = _db.Database.GetDbConnection();
@@ -68,26 +174,28 @@ public class FoodService : IFoodService
             totalCount = Convert.ToInt32(await countCmd.ExecuteScalarAsync());
         }
 
-        // Data query — ranked by relevance
         var dataSql = $@"
             SELECT
-                fi.id                AS Id,
-                fi.name_vi           AS NameVi,
-                fi.name_en           AS NameEn,
-                fi.category_id       AS CategoryId,
-                fi.source            AS Source,
-                fi.serving_size_g    AS ServingSizeG,
-                fi.serving_unit_vi   AS ServingUnitVi,
-                fi.thumbnail_url     AS ThumbnailUrl,
-                fi.active_image_id   AS ActiveImageId,
-                fn.calories_kcal     AS CaloriesKcal,
-                fii.storage_path     AS ImageStoragePath,
-                fii.storage_provider AS ImageStorageProvider
+                fi.Id                AS Id,
+                fi.NameVi           AS NameVi,
+                fi.NameEn           AS NameEn,
+                fi.CategoryId       AS CategoryId,
+                fi.Source            AS Source,
+                fi.ServingSizeG    AS ServingSizeG,
+                fi.ServingUnitVi   AS ServingUnitVi,
+                fi.ThumbnailUrl     AS ThumbnailUrl,
+                fi.ActiveImageId   AS ActiveImageId,
+                fn.CaloriesKcal     AS CaloriesKcal,
+                fn.ProteinG         AS ProteinG,
+                fn.CarbsG           AS CarbsG,
+                fn.FatG             AS FatG,
+                fii.StoragePath     AS ImageStoragePath,
+                fii.StorageProvider AS ImageStorageProvider
             FROM food_items fi
-            LEFT JOIN food_nutrition fn ON fn.food_item_id = fi.id
-            LEFT JOIN food_item_images fii ON fi.source != 3 AND fii.id = fi.active_image_id
+            LEFT JOIN food_nutrition fn ON fn.FoodItemId = fi.Id
+            LEFT JOIN food_item_images fii ON fi.Source != {(byte)FoodSource.Community} AND fii.Id = fi.ActiveImageId
             WHERE {whereClause}
-            ORDER BY MATCH(fi.name_vi, fi.name_en) AGAINST (@searchTerm2 IN BOOLEAN MODE) DESC
+            ORDER BY MATCH(fi.NameVi, fi.NameEn) AGAINST (@searchTerm2 IN BOOLEAN MODE) DESC
             LIMIT @limit OFFSET @offset";
 
         var items = new List<FoodSearchResponse>();
@@ -117,13 +225,13 @@ public class FoodService : IFoodService
                     ? null
                     : reader.GetString(reader.GetOrdinal("ImageStorageProvider"));
                 
-                string? resolvedImageUrl = source == 3
+                string? resolvedImageUrl = source == (byte)FoodSource.Community
                     ? thumbnailUrl
                     : (imageStoragePath != null ? _storage.BuildUrl(imageStoragePath) : null);
 
                 items.Add(new FoodSearchResponse
                 {
-                    Id = Guid.Parse(reader.GetString(reader.GetOrdinal("Id"))),
+                    Id = reader.GetGuid(reader.GetOrdinal("Id")),
                     NameVi = reader.GetString(reader.GetOrdinal("NameVi")),
                     NameEn = reader.IsDBNull(reader.GetOrdinal("NameEn"))
                         ? null
@@ -137,6 +245,15 @@ public class FoodService : IFoodService
                     CaloriesKcal = reader.IsDBNull(reader.GetOrdinal("CaloriesKcal"))
                         ? null
                         : reader.GetDecimal(reader.GetOrdinal("CaloriesKcal")),
+                    ProteinG = reader.IsDBNull(reader.GetOrdinal("ProteinG"))
+                        ? null
+                        : reader.GetDecimal(reader.GetOrdinal("ProteinG")),
+                    CarbsG = reader.IsDBNull(reader.GetOrdinal("CarbsG"))
+                        ? null
+                        : reader.GetDecimal(reader.GetOrdinal("CarbsG")),
+                    FatG = reader.IsDBNull(reader.GetOrdinal("FatG"))
+                        ? null
+                        : reader.GetDecimal(reader.GetOrdinal("FatG")),
                     ImageUrl = resolvedImageUrl
                 });
             }
@@ -181,6 +298,8 @@ public class FoodService : IFoodService
             .Where(c => c.ParentFoodId == foodItemId)
             .Include(c => c.ChildFood)
                 .ThenInclude(cf => cf.Nutrition)
+            .Include(c => c.ChildFood)
+                .ThenInclude(cf => cf.ActiveImage)
             .ToListAsync();
 
         return _mapper.Map<List<FoodComponentResponse>>(components);
@@ -195,7 +314,7 @@ public class FoodService : IFoodService
             .Include(f => f.Category)
             .Include(f => f.Nutrition)
             .Include(f => f.ActiveImage)
-            .FirstOrDefaultAsync(f => f.Barcode == barcode && f.Status == 1);
+            .FirstOrDefaultAsync(f => f.Barcode == barcode && f.Status == FoodStatus.Approved);
 
         if (food == null)
             throw new NotFoundException("Không tìm thấy sản phẩm với mã vạch này.");
@@ -229,8 +348,8 @@ public class FoodService : IFoodService
             NameVi = request.NameVi,
             NameEn = request.NameEn,
             CategoryId = request.CategoryId,
-            Source = 3, // community
-            Status = 0, // pending
+            Source = FoodSource.Community, // community
+            Status = FoodStatus.Pending, // pending
             ServingSizeG = request.ServingSizeG,
             ServingUnitVi = request.ServingUnitVi,
             Barcode = request.Barcode,
@@ -269,6 +388,117 @@ public class FoodService : IFoodService
         foodItem.Nutrition = nutrition;
 
         return _mapper.Map<FoodDetailResponse>(foodItem);
+    }
+
+    /// <summary>
+    /// Create a custom recipe (composite food) for a user.
+    /// Automatically calculates nutrition based on selected ingredients.
+    /// </summary>
+    public async Task<FoodDetailResponse> CreateRecipeAsync(CreateRecipeRequest request, Guid userId)
+    {
+        // Validate category
+        var categoryExists = await _db.FoodCategories.AnyAsync(c => c.Id == request.CategoryId);
+        if (!categoryExists)
+            throw new BusinessException("INVALID_CATEGORY", "Danh mục không tồn tại.");
+
+        if (request.Components == null || request.Components.Count == 0)
+            throw new BusinessException("EMPTY_COMPONENTS", "Công thức phải có ít nhất 1 thành phần.");
+
+        var childFoodIds = request.Components.Select(c => c.ChildFoodId).ToList();
+        var childFoods = await _db.FoodItems
+            .Include(f => f.Nutrition)
+            .Where(f => childFoodIds.Contains(f.Id))
+            .ToDictionaryAsync(f => f.Id);
+
+        foreach (var comp in request.Components)
+        {
+            if (!childFoods.ContainsKey(comp.ChildFoodId))
+                throw new NotFoundException($"Không tìm thấy nguyên liệu với ID: {comp.ChildFoodId}");
+        }
+
+        // Calculate totals
+        decimal totalCalories = 0;
+        decimal totalProtein = 0;
+        decimal totalCarbs = 0;
+        decimal totalFat = 0;
+        decimal totalFiber = 0;
+        decimal totalSugar = 0;
+        decimal totalSodium = 0;
+        decimal totalWeightG = 0;
+
+        foreach (var comp in request.Components)
+        {
+            var childFood = childFoods[comp.ChildFoodId];
+            if (childFood.ServingSizeG <= 0) continue; // Safety check
+
+            var ratio = comp.QuantityG / childFood.ServingSizeG;
+
+            totalWeightG += comp.QuantityG;
+
+            if (childFood.Nutrition != null)
+            {
+                totalCalories += childFood.Nutrition.CaloriesKcal * ratio;
+                totalProtein += childFood.Nutrition.ProteinG * ratio;
+                totalCarbs += childFood.Nutrition.CarbsG * ratio;
+                totalFat += childFood.Nutrition.FatG * ratio;
+                totalFiber += (childFood.Nutrition.FiberG ?? 0) * ratio;
+                totalSugar += (childFood.Nutrition.SugarG ?? 0) * ratio;
+                totalSodium += (childFood.Nutrition.SodiumMg ?? 0) * ratio;
+            }
+        }
+
+        var recipeItem = new FoodItem
+        {
+            Id = Guid.NewGuid(),
+            NameVi = request.NameVi,
+            NameEn = request.NameEn,
+            CategoryId = request.CategoryId,
+            Source = FoodSource.Community, // Community/User
+            Status = FoodStatus.Pending, // Pending/Private
+            ServingSizeG = totalWeightG > 0 ? totalWeightG : 100, // Fallback if weight is 0
+            ServingUnitVi = request.ServingUnitVi,
+            CreatedBy = userId,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+        };
+
+        if (request.Image != null)
+        {
+            var publicId = await _storage.UploadAsync(request.Image, folder: "wao/foods");
+            recipeItem.ThumbnailUrl = _storage.BuildUrl(publicId);
+        }
+
+        var recipeNutrition = new FoodNutrition
+        {
+            FoodItemId = recipeItem.Id,
+            CaloriesKcal = totalCalories,
+            ProteinG = totalProtein,
+            CarbsG = totalCarbs,
+            FatG = totalFat,
+            FiberG = totalFiber,
+            SugarG = totalSugar,
+            SodiumMg = totalSodium,
+            UpdatedAt = DateTime.UtcNow,
+        };
+
+        var components = request.Components.Select(c => new FoodItemComponent
+        {
+            ParentFoodId = recipeItem.Id,
+            ChildFoodId = c.ChildFoodId,
+            QuantityG = c.QuantityG
+        }).ToList();
+
+        _db.FoodItems.Add(recipeItem);
+        _db.FoodNutritions.Add(recipeNutrition);
+        _db.FoodItemComponents.AddRange(components);
+        
+        await _db.SaveChangesAsync();
+
+        // Reload for response
+        await _db.Entry(recipeItem).Reference(f => f.Category).LoadAsync();
+        recipeItem.Nutrition = recipeNutrition;
+
+        return _mapper.Map<FoodDetailResponse>(recipeItem);
     }
 
     /// <summary>

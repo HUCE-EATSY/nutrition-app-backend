@@ -4,6 +4,7 @@ using nutrition_app_backend.Models.Foods;
 using nutrition_app_backend.Models.Diaries;
 using nutrition_app_backend.Models.Exercises;
 using nutrition_app_backend.Models.Notifications;
+using nutrition_app_backend.Extensions;
 
 namespace nutrition_app_backend.Data;
 
@@ -29,6 +30,8 @@ public class WaoDbContext : DbContext
     // Logging Group
     public DbSet<MealType> MealTypes { get; set; } = null!;
     public DbSet<FoodLog> FoodLogs { get; set; } = null!;
+    public DbSet<StepLog> StepLogs { get; set; } = null!;
+    public DbSet<UserHealthConnection> UserHealthConnections { get; set; } = null!;
 
     // Exercise Group
     public DbSet<ExerciseCategory> ExerciseCategories { get; set; } = null!;
@@ -113,6 +116,32 @@ public class WaoDbContext : DbContext
 
             entity.HasOne(d => d.User)
                   .WithMany(p => p.WeightLogs)
+                  .HasForeignKey(d => d.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<StepLog>(entity =>
+        {
+            entity.ToTable("step_logs");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UserId).HasColumnType("CHAR(36)");
+            entity.Property(e => e.CaloriesBurnedKcal).HasPrecision(8, 2);
+            entity.HasIndex(e => new { e.UserId, e.LogDate }).IsUnique().HasDatabaseName("idx_steps_user_date");
+
+            entity.HasOne(d => d.User)
+                  .WithMany(p => p.StepLogs)
+                  .HasForeignKey(d => d.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<UserHealthConnection>(entity =>
+        {
+            entity.ToTable("user_health_connections");
+            entity.HasKey(e => new { e.UserId, e.Provider });
+            entity.Property(e => e.UserId).HasColumnType("CHAR(36)");
+
+            entity.HasOne(d => d.User)
+                  .WithMany(p => p.HealthConnections)
                   .HasForeignKey(d => d.UserId)
                   .OnDelete(DeleteBehavior.Cascade);
         });
@@ -431,5 +460,14 @@ public class WaoDbContext : DbContext
             new NotificationType { Id = 6, Code = "DAILY_SUMMARY", NameVi = "Tổng kết ngày", NameEn = "Daily Summary", Description = "Tổng kết dinh dưỡng và tập luyện trong ngày" },
             new NotificationType { Id = 7, Code = "WEEKLY_REPORT", NameVi = "Báo cáo tuần", NameEn = "Weekly Report", Description = "Báo cáo tiến độ hàng tuần" }
         );
+    }
+
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        configurationBuilder.Properties<DateTime>()
+            .HaveConversion<UtcDateTimeConverter>();
+
+        configurationBuilder.Properties<DateTime?>()
+            .HaveConversion<NullableUtcDateTimeConverter>();
     }
 }

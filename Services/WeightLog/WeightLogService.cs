@@ -42,6 +42,20 @@ public class WeightLogService : IWeightLogService
         };
 
         _db.WeightLogs.Add(log);
+
+        // Update user profile weight if this is the latest log
+        var profile = await _db.UserProfiles.FirstOrDefaultAsync(p => p.UserId == userId);
+        if (profile != null)
+        {
+            var hasNewerLog = await _db.WeightLogs
+                .AnyAsync(w => w.UserId == userId && w.LogDate > request.LogDate);
+            if (!hasNewerLog)
+            {
+                profile.WeightKg = request.WeightKg;
+                profile.UpdatedAt = DateTime.UtcNow;
+            }
+        }
+
         await _db.SaveChangesAsync();
 
         return _mapper.Map<WeightLogResponse>(log);
@@ -76,6 +90,19 @@ public class WeightLogService : IWeightLogService
 
         log.WeightKg = request.WeightKg;
         log.Note = request.Note;
+
+        // Update user profile weight if this is the latest log
+        var profile = await _db.UserProfiles.FirstOrDefaultAsync(p => p.UserId == userId);
+        if (profile != null)
+        {
+            var hasNewerLog = await _db.WeightLogs
+                .AnyAsync(w => w.UserId == userId && w.LogDate > log.LogDate);
+            if (!hasNewerLog)
+            {
+                profile.WeightKg = request.WeightKg;
+                profile.UpdatedAt = DateTime.UtcNow;
+            }
+        }
 
         await _db.SaveChangesAsync();
 

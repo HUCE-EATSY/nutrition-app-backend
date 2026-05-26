@@ -1,6 +1,8 @@
 using nutrition_app_backend.Models.Users;
 using nutrition_app_backend.Models.Diaries;
 
+using nutrition_app_backend.Enums;
+
 namespace nutrition_app_backend.Models.Foods;
 
 public class FoodItem
@@ -10,8 +12,8 @@ public class FoodItem
     public string? NameEn { get; set; }
     public Guid? ParentId { get; set; }
     public byte CategoryId { get; set; }
-    public byte Source { get; set; } = 1;
-    public byte Status { get; set; } = 0;
+    public FoodSource Source { get; set; } = FoodSource.Official;
+    public FoodStatus Status { get; set; } = FoodStatus.Pending;
     public decimal ServingSizeG { get; set; }
     public string ServingUnitVi { get; set; } = "g";
     public string? ThumbnailUrl { get; set; }
