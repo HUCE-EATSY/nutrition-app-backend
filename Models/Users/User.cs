@@ -1,5 +1,7 @@
 using nutrition_app_backend.Models.Diaries;
 using nutrition_app_backend.Models.Foods;
+using nutrition_app_backend.Models.Exercises;
+using nutrition_app_backend.Models.Notifications;
 
 namespace nutrition_app_backend.Models.Users;
 
@@ -20,4 +22,11 @@ public class User
     public ICollection<WeightLog> WeightLogs { get; set; } = new List<WeightLog>();
     public ICollection<FoodLog> FoodLogs { get; set; } = new List<FoodLog>();
     public ICollection<FoodItem> CreatedFoods { get; set; } = new List<FoodItem>();
+    public ICollection<StepLog> StepLogs { get; set; } = new List<StepLog>();
+    public ICollection<UserHealthConnection> HealthConnections { get; set; } = new List<UserHealthConnection>();
+    
+    // Exercise & Notification
+    public ICollection<ExerciseLog> ExerciseLogs { get; set; } = new List<ExerciseLog>();
+    public ICollection<UserNotificationSetting> NotificationSettings { get; set; } = new List<UserNotificationSetting>();
+    public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
 }

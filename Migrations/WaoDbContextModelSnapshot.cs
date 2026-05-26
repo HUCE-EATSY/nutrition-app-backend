@@ -119,6 +119,48 @@ namespace nutrition_app_backend.Migrations
                         });
                 });
 
+            modelBuilder.Entity("nutrition_app_backend.Models.Diaries.StepLog", b =>
+                {
+                    b.Property<ulong>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint unsigned");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<ulong>("Id"));
+
+                    b.Property<decimal>("CaloriesBurnedKcal")
+                        .HasPrecision(8, 2)
+                        .HasColumnType("decimal(8,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateOnly>("LogDate")
+                        .HasColumnType("date");
+
+                    b.Property<byte?>("Provider")
+                        .HasColumnType("tinyint unsigned");
+
+                    b.Property<int>("StepGoal")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Steps")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("CHAR(36)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "LogDate")
+                        .IsUnique()
+                        .HasDatabaseName("idx_steps_user_date");
+
+                    b.ToTable("step_logs", (string)null);
+                });
+
             modelBuilder.Entity("nutrition_app_backend.Models.Diaries.WeightLog", b =>
                 {
                     b.Property<ulong>("Id")
@@ -150,6 +192,331 @@ namespace nutrition_app_backend.Migrations
                         .HasDatabaseName("idx_weight_user_date");
 
                     b.ToTable("weight_logs", (string)null);
+                });
+
+            modelBuilder.Entity("nutrition_app_backend.Models.Exercises.Exercise", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("CHAR(36)");
+
+                    b.Property<int>("CategoryId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime(6)")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("IconUrl")
+                        .HasColumnType("longtext");
+
+                    b.Property<decimal>("MetValue")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<string>("NameEn")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("NameVi")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint unsigned");
+
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime(6)")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoryId")
+                        .HasDatabaseName("idx_exercise_category");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("idx_exercise_status");
+
+                    b.ToTable("exercises", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("10000000-0000-0000-0000-000000000001"),
+                            CategoryId = 1,
+                            CreatedAt = new DateTime(2026, 5, 26, 2, 56, 29, 963, DateTimeKind.Utc).AddTicks(3090),
+                            MetValue = 8.0m,
+                            NameEn = "Running",
+                            NameVi = "Chạy bộ",
+                            Status = (byte)1,
+                            Unit = "minutes",
+                            UpdatedAt = new DateTime(2026, 5, 26, 2, 56, 29, 963, DateTimeKind.Utc).AddTicks(3094)
+                        },
+                        new
+                        {
+                            Id = new Guid("10000000-0000-0000-0000-000000000002"),
+                            CategoryId = 1,
+                            CreatedAt = new DateTime(2026, 5, 26, 2, 56, 29, 963, DateTimeKind.Utc).AddTicks(3100),
+                            MetValue = 3.5m,
+                            NameEn = "Walking",
+                            NameVi = "Đi bộ",
+                            Status = (byte)1,
+                            Unit = "minutes",
+                            UpdatedAt = new DateTime(2026, 5, 26, 2, 56, 29, 963, DateTimeKind.Utc).AddTicks(3101)
+                        },
+                        new
+                        {
+                            Id = new Guid("10000000-0000-0000-0000-000000000003"),
+                            CategoryId = 1,
+                            CreatedAt = new DateTime(2026, 5, 26, 2, 56, 29, 963, DateTimeKind.Utc).AddTicks(3105),
+                            MetValue = 7.5m,
+                            NameEn = "Cycling",
+                            NameVi = "Đạp xe",
+                            Status = (byte)1,
+                            Unit = "minutes",
+                            UpdatedAt = new DateTime(2026, 5, 26, 2, 56, 29, 963, DateTimeKind.Utc).AddTicks(3109)
+                        },
+                        new
+                        {
+                            Id = new Guid("10000000-0000-0000-0000-000000000004"),
+                            CategoryId = 1,
+                            CreatedAt = new DateTime(2026, 5, 26, 2, 56, 29, 963, DateTimeKind.Utc).AddTicks(3125),
+                            MetValue = 9.0m,
+                            NameEn = "Swimming",
+                            NameVi = "Bơi lội",
+                            Status = (byte)1,
+                            Unit = "minutes",
+                            UpdatedAt = new DateTime(2026, 5, 26, 2, 56, 29, 963, DateTimeKind.Utc).AddTicks(3126)
+                        },
+                        new
+                        {
+                            Id = new Guid("10000000-0000-0000-0000-000000000005"),
+                            CategoryId = 1,
+                            CreatedAt = new DateTime(2026, 5, 26, 2, 56, 29, 963, DateTimeKind.Utc).AddTicks(3130),
+                            MetValue = 12.0m,
+                            NameEn = "Jump Rope",
+                            NameVi = "Nhảy dây",
+                            Status = (byte)1,
+                            Unit = "minutes",
+                            UpdatedAt = new DateTime(2026, 5, 26, 2, 56, 29, 963, DateTimeKind.Utc).AddTicks(3130)
+                        },
+                        new
+                        {
+                            Id = new Guid("10000000-0000-0000-0000-000000000006"),
+                            CategoryId = 2,
+                            CreatedAt = new DateTime(2026, 5, 26, 2, 56, 29, 963, DateTimeKind.Utc).AddTicks(3134),
+                            MetValue = 6.0m,
+                            NameEn = "Weight Training",
+                            NameVi = "Tập tạ",
+                            Status = (byte)1,
+                            Unit = "minutes",
+                            UpdatedAt = new DateTime(2026, 5, 26, 2, 56, 29, 963, DateTimeKind.Utc).AddTicks(3135)
+                        },
+                        new
+                        {
+                            Id = new Guid("10000000-0000-0000-0000-000000000007"),
+                            CategoryId = 2,
+                            CreatedAt = new DateTime(2026, 5, 26, 2, 56, 29, 963, DateTimeKind.Utc).AddTicks(3138),
+                            MetValue = 8.0m,
+                            NameEn = "Push-ups",
+                            NameVi = "Hít đất",
+                            Status = (byte)1,
+                            Unit = "reps",
+                            UpdatedAt = new DateTime(2026, 5, 26, 2, 56, 29, 963, DateTimeKind.Utc).AddTicks(3139)
+                        },
+                        new
+                        {
+                            Id = new Guid("10000000-0000-0000-0000-000000000008"),
+                            CategoryId = 2,
+                            CreatedAt = new DateTime(2026, 5, 26, 2, 56, 29, 963, DateTimeKind.Utc).AddTicks(3142),
+                            MetValue = 8.0m,
+                            NameEn = "Sit-ups",
+                            NameVi = "Gập bụng",
+                            Status = (byte)1,
+                            Unit = "reps",
+                            UpdatedAt = new DateTime(2026, 5, 26, 2, 56, 29, 963, DateTimeKind.Utc).AddTicks(3143)
+                        },
+                        new
+                        {
+                            Id = new Guid("10000000-0000-0000-0000-000000000009"),
+                            CategoryId = 3,
+                            CreatedAt = new DateTime(2026, 5, 26, 2, 56, 29, 963, DateTimeKind.Utc).AddTicks(3146),
+                            MetValue = 3.0m,
+                            NameEn = "Yoga",
+                            NameVi = "Yoga",
+                            Status = (byte)1,
+                            Unit = "minutes",
+                            UpdatedAt = new DateTime(2026, 5, 26, 2, 56, 29, 963, DateTimeKind.Utc).AddTicks(3147)
+                        },
+                        new
+                        {
+                            Id = new Guid("10000000-0000-0000-0000-000000000010"),
+                            CategoryId = 3,
+                            CreatedAt = new DateTime(2026, 5, 26, 2, 56, 29, 963, DateTimeKind.Utc).AddTicks(3150),
+                            MetValue = 4.0m,
+                            NameEn = "Pilates",
+                            NameVi = "Pilates",
+                            Status = (byte)1,
+                            Unit = "minutes",
+                            UpdatedAt = new DateTime(2026, 5, 26, 2, 56, 29, 963, DateTimeKind.Utc).AddTicks(3151)
+                        },
+                        new
+                        {
+                            Id = new Guid("10000000-0000-0000-0000-000000000011"),
+                            CategoryId = 4,
+                            CreatedAt = new DateTime(2026, 5, 26, 2, 56, 29, 963, DateTimeKind.Utc).AddTicks(3155),
+                            MetValue = 10.0m,
+                            NameEn = "Football/Soccer",
+                            NameVi = "Bóng đá",
+                            Status = (byte)1,
+                            Unit = "minutes",
+                            UpdatedAt = new DateTime(2026, 5, 26, 2, 56, 29, 963, DateTimeKind.Utc).AddTicks(3155)
+                        },
+                        new
+                        {
+                            Id = new Guid("10000000-0000-0000-0000-000000000012"),
+                            CategoryId = 4,
+                            CreatedAt = new DateTime(2026, 5, 26, 2, 56, 29, 963, DateTimeKind.Utc).AddTicks(3159),
+                            MetValue = 7.0m,
+                            NameEn = "Badminton",
+                            NameVi = "Cầu lông",
+                            Status = (byte)1,
+                            Unit = "minutes",
+                            UpdatedAt = new DateTime(2026, 5, 26, 2, 56, 29, 963, DateTimeKind.Utc).AddTicks(3159)
+                        },
+                        new
+                        {
+                            Id = new Guid("10000000-0000-0000-0000-000000000013"),
+                            CategoryId = 4,
+                            CreatedAt = new DateTime(2026, 5, 26, 2, 56, 29, 963, DateTimeKind.Utc).AddTicks(3163),
+                            MetValue = 8.0m,
+                            NameEn = "Basketball",
+                            NameVi = "Bóng rổ",
+                            Status = (byte)1,
+                            Unit = "minutes",
+                            UpdatedAt = new DateTime(2026, 5, 26, 2, 56, 29, 963, DateTimeKind.Utc).AddTicks(3164)
+                        });
+                });
+
+            modelBuilder.Entity("nutrition_app_backend.Models.Exercises.ExerciseCategory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("int");
+
+                    b.Property<string>("IconUrl")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("NameEn")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("NameVi")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("exercise_categories", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            DisplayOrder = 1,
+                            NameEn = "Cardio",
+                            NameVi = "Cardio"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            DisplayOrder = 2,
+                            NameEn = "Strength",
+                            NameVi = "Sức mạnh"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            DisplayOrder = 3,
+                            NameEn = "Yoga & Pilates",
+                            NameVi = "Yoga & Pilates"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            DisplayOrder = 4,
+                            NameEn = "Sports",
+                            NameVi = "Thể thao"
+                        },
+                        new
+                        {
+                            Id = 5,
+                            DisplayOrder = 5,
+                            NameEn = "Other",
+                            NameVi = "Khác"
+                        });
+                });
+
+            modelBuilder.Entity("nutrition_app_backend.Models.Exercises.ExerciseLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("CHAR(36)");
+
+                    b.Property<decimal>("CaloriesBurned")
+                        .HasPrecision(8, 2)
+                        .HasColumnType("decimal(8,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime(6)")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+
+                    b.Property<int>("DurationMinutes")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("ExerciseId")
+                        .HasColumnType("CHAR(36)");
+
+                    b.Property<byte>("Intensity")
+                        .HasColumnType("tinyint unsigned");
+
+                    b.Property<DateOnly>("LogDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime(6)")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("CHAR(36)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExerciseId");
+
+                    b.HasIndex("UserId", "LogDate")
+                        .HasDatabaseName("idx_exercise_logs_user_date");
+
+                    b.ToTable("exercise_logs", (string)null);
                 });
 
             modelBuilder.Entity("nutrition_app_backend.Models.Foods.FoodCategory", b =>
@@ -403,6 +770,184 @@ namespace nutrition_app_backend.Migrations
                     b.ToTable("food_nutrition", (string)null);
                 });
 
+            modelBuilder.Entity("nutrition_app_backend.Models.Notifications.Notification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("CHAR(36)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime(6)")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+
+                    b.Property<string>("Data")
+                        .HasColumnType("longtext");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<int>("NotificationTypeId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ReadAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("CHAR(36)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NotificationTypeId");
+
+                    b.HasIndex("UserId", "CreatedAt")
+                        .HasDatabaseName("idx_notif_user_created");
+
+                    b.HasIndex("UserId", "IsRead")
+                        .HasDatabaseName("idx_notif_user_read");
+
+                    b.ToTable("notifications", (string)null);
+                });
+
+            modelBuilder.Entity("nutrition_app_backend.Models.Notifications.NotificationType", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("NameEn")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("NameVi")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("notification_types", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Code = "MEAL_REMINDER",
+                            Description = "Nhắc nhở ghi nhật ký bữa ăn",
+                            NameEn = "Meal Reminder",
+                            NameVi = "Nhắc nhở bữa ăn"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Code = "EXERCISE_REMINDER",
+                            Description = "Nhắc nhở ghi nhật ký tập luyện",
+                            NameEn = "Exercise Reminder",
+                            NameVi = "Nhắc nhở tập luyện"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Code = "WEIGHT_LOG_REMINDER",
+                            Description = "Nhắc nhở ghi lại cân nặng",
+                            NameEn = "Weight Log Reminder",
+                            NameVi = "Nhắc nhở cân nặng"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Code = "WATER_REMINDER",
+                            Description = "Nhắc nhở uống nước",
+                            NameEn = "Water Reminder",
+                            NameVi = "Nhắc nhở uống nước"
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Code = "GOAL_ACHIEVED",
+                            Description = "Thông báo khi đạt mục tiêu",
+                            NameEn = "Goal Achieved",
+                            NameVi = "Đạt mục tiêu"
+                        },
+                        new
+                        {
+                            Id = 6,
+                            Code = "DAILY_SUMMARY",
+                            Description = "Tổng kết dinh dưỡng và tập luyện trong ngày",
+                            NameEn = "Daily Summary",
+                            NameVi = "Tổng kết ngày"
+                        },
+                        new
+                        {
+                            Id = 7,
+                            Code = "WEEKLY_REPORT",
+                            Description = "Báo cáo tiến độ hàng tuần",
+                            NameEn = "Weekly Report",
+                            NameVi = "Báo cáo tuần"
+                        });
+                });
+
+            modelBuilder.Entity("nutrition_app_backend.Models.Notifications.UserNotificationSetting", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("CHAR(36)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime(6)")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+
+                    b.Property<string>("DaysOfWeek")
+                        .HasColumnType("longtext");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<int>("NotificationTypeId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ReminderTime")
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime(6)")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("CHAR(36)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NotificationTypeId");
+
+                    b.HasIndex("UserId", "NotificationTypeId")
+                        .IsUnique()
+                        .HasDatabaseName("idx_user_notif_setting_unique");
+
+                    b.ToTable("user_notification_settings", (string)null);
+                });
+
             modelBuilder.Entity("nutrition_app_backend.Models.Users.RefreshToken", b =>
                 {
                     b.Property<Guid>("Id")
@@ -563,6 +1108,28 @@ namespace nutrition_app_backend.Migrations
                     b.ToTable("user_goals", (string)null);
                 });
 
+            modelBuilder.Entity("nutrition_app_backend.Models.Users.UserHealthConnection", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("CHAR(36)");
+
+                    b.Property<byte>("Provider")
+                        .HasColumnType("tinyint unsigned");
+
+                    b.Property<DateTime?>("ConnectedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint unsigned");
+
+                    b.HasKey("UserId", "Provider");
+
+                    b.ToTable("user_health_connections", (string)null);
+                });
+
             modelBuilder.Entity("nutrition_app_backend.Models.Users.UserProfile", b =>
                 {
                     b.Property<Guid>("UserId")
@@ -623,6 +1190,17 @@ namespace nutrition_app_backend.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("nutrition_app_backend.Models.Diaries.StepLog", b =>
+                {
+                    b.HasOne("nutrition_app_backend.Models.Users.User", "User")
+                        .WithMany("StepLogs")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("nutrition_app_backend.Models.Diaries.WeightLog", b =>
                 {
                     b.HasOne("nutrition_app_backend.Models.Users.User", "User")
@@ -630,6 +1208,36 @@ namespace nutrition_app_backend.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("nutrition_app_backend.Models.Exercises.Exercise", b =>
+                {
+                    b.HasOne("nutrition_app_backend.Models.Exercises.ExerciseCategory", "Category")
+                        .WithMany("Exercises")
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Category");
+                });
+
+            modelBuilder.Entity("nutrition_app_backend.Models.Exercises.ExerciseLog", b =>
+                {
+                    b.HasOne("nutrition_app_backend.Models.Exercises.Exercise", "Exercise")
+                        .WithMany("ExerciseLogs")
+                        .HasForeignKey("ExerciseId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("nutrition_app_backend.Models.Users.User", "User")
+                        .WithMany("ExerciseLogs")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Exercise");
 
                     b.Navigation("User");
                 });
@@ -707,6 +1315,44 @@ namespace nutrition_app_backend.Migrations
                     b.Navigation("FoodItem");
                 });
 
+            modelBuilder.Entity("nutrition_app_backend.Models.Notifications.Notification", b =>
+                {
+                    b.HasOne("nutrition_app_backend.Models.Notifications.NotificationType", "NotificationType")
+                        .WithMany("Notifications")
+                        .HasForeignKey("NotificationTypeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("nutrition_app_backend.Models.Users.User", "User")
+                        .WithMany("Notifications")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("NotificationType");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("nutrition_app_backend.Models.Notifications.UserNotificationSetting", b =>
+                {
+                    b.HasOne("nutrition_app_backend.Models.Notifications.NotificationType", "NotificationType")
+                        .WithMany("UserSettings")
+                        .HasForeignKey("NotificationTypeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("nutrition_app_backend.Models.Users.User", "User")
+                        .WithMany("NotificationSettings")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("NotificationType");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("nutrition_app_backend.Models.Users.RefreshToken", b =>
                 {
                     b.HasOne("nutrition_app_backend.Models.Users.User", "User")
@@ -740,6 +1386,17 @@ namespace nutrition_app_backend.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("nutrition_app_backend.Models.Users.UserHealthConnection", b =>
+                {
+                    b.HasOne("nutrition_app_backend.Models.Users.User", "User")
+                        .WithMany("HealthConnections")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("nutrition_app_backend.Models.Users.UserProfile", b =>
                 {
                     b.HasOne("nutrition_app_backend.Models.Users.User", "User")
@@ -754,6 +1411,16 @@ namespace nutrition_app_backend.Migrations
             modelBuilder.Entity("nutrition_app_backend.Models.Diaries.MealType", b =>
                 {
                     b.Navigation("FoodLogs");
+                });
+
+            modelBuilder.Entity("nutrition_app_backend.Models.Exercises.Exercise", b =>
+                {
+                    b.Navigation("ExerciseLogs");
+                });
+
+            modelBuilder.Entity("nutrition_app_backend.Models.Exercises.ExerciseCategory", b =>
+                {
+                    b.Navigation("Exercises");
                 });
 
             modelBuilder.Entity("nutrition_app_backend.Models.Foods.FoodCategory", b =>
@@ -776,19 +1443,36 @@ namespace nutrition_app_backend.Migrations
                     b.Navigation("Nutrition");
                 });
 
+            modelBuilder.Entity("nutrition_app_backend.Models.Notifications.NotificationType", b =>
+                {
+                    b.Navigation("Notifications");
+
+                    b.Navigation("UserSettings");
+                });
+
             modelBuilder.Entity("nutrition_app_backend.Models.Users.User", b =>
                 {
                     b.Navigation("AuthProviders");
 
                     b.Navigation("CreatedFoods");
 
+                    b.Navigation("ExerciseLogs");
+
                     b.Navigation("FoodLogs");
 
                     b.Navigation("Goals");
 
+                    b.Navigation("HealthConnections");
+
+                    b.Navigation("NotificationSettings");
+
+                    b.Navigation("Notifications");
+
                     b.Navigation("Profile");
 
                     b.Navigation("RefreshTokens");
+
+                    b.Navigation("StepLogs");
 
                     b.Navigation("WeightLogs");
                 });

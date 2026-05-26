@@ -2,6 +2,9 @@ using Microsoft.EntityFrameworkCore;
 using nutrition_app_backend.Models.Users;
 using nutrition_app_backend.Models.Foods;
 using nutrition_app_backend.Models.Diaries;
+using nutrition_app_backend.Models.Exercises;
+using nutrition_app_backend.Models.Notifications;
+using nutrition_app_backend.Extensions;
 
 namespace nutrition_app_backend.Data;
 
@@ -27,6 +30,18 @@ public class WaoDbContext : DbContext
     // Logging Group
     public DbSet<MealType> MealTypes { get; set; } = null!;
     public DbSet<FoodLog> FoodLogs { get; set; } = null!;
+    public DbSet<StepLog> StepLogs { get; set; } = null!;
+    public DbSet<UserHealthConnection> UserHealthConnections { get; set; } = null!;
+
+    // Exercise Group
+    public DbSet<ExerciseCategory> ExerciseCategories { get; set; } = null!;
+    public DbSet<Exercise> Exercises { get; set; } = null!;
+    public DbSet<ExerciseLog> ExerciseLogs { get; set; } = null!;
+
+    // Notification Group
+    public DbSet<NotificationType> NotificationTypes { get; set; } = null!;
+    public DbSet<UserNotificationSetting> UserNotificationSettings { get; set; } = null!;
+    public DbSet<Notification> Notifications { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -101,6 +116,32 @@ public class WaoDbContext : DbContext
 
             entity.HasOne(d => d.User)
                   .WithMany(p => p.WeightLogs)
+                  .HasForeignKey(d => d.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<StepLog>(entity =>
+        {
+            entity.ToTable("step_logs");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UserId).HasColumnType("CHAR(36)");
+            entity.Property(e => e.CaloriesBurnedKcal).HasPrecision(8, 2);
+            entity.HasIndex(e => new { e.UserId, e.LogDate }).IsUnique().HasDatabaseName("idx_steps_user_date");
+
+            entity.HasOne(d => d.User)
+                  .WithMany(p => p.StepLogs)
+                  .HasForeignKey(d => d.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<UserHealthConnection>(entity =>
+        {
+            entity.ToTable("user_health_connections");
+            entity.HasKey(e => new { e.UserId, e.Provider });
+            entity.Property(e => e.UserId).HasColumnType("CHAR(36)");
+
+            entity.HasOne(d => d.User)
+                  .WithMany(p => p.HealthConnections)
                   .HasForeignKey(d => d.UserId)
                   .OnDelete(DeleteBehavior.Cascade);
         });
@@ -252,6 +293,112 @@ public class WaoDbContext : DbContext
                   .OnDelete(DeleteBehavior.Restrict);
         });
 
+        // --- GROUP 4: EXERCISE ---
+        modelBuilder.Entity<ExerciseCategory>(entity =>
+        {
+            entity.ToTable("exercise_categories");
+            entity.HasKey(e => e.Id);
+        });
+
+        modelBuilder.Entity<Exercise>(entity =>
+        {
+            entity.ToTable("exercises");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnType("CHAR(36)");
+            entity.Property(e => e.MetValue).HasPrecision(5, 2);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)");
+            
+            entity.HasIndex(e => e.Status).HasDatabaseName("idx_exercise_status");
+            entity.HasIndex(e => e.CategoryId).HasDatabaseName("idx_exercise_category");
+
+            entity.HasOne(d => d.Category)
+                  .WithMany(p => p.Exercises)
+                  .HasForeignKey(d => d.CategoryId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ExerciseLog>(entity =>
+        {
+            entity.ToTable("exercise_logs");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnType("CHAR(36)");
+            entity.Property(e => e.UserId).HasColumnType("CHAR(36)");
+            entity.Property(e => e.ExerciseId).HasColumnType("CHAR(36)");
+            entity.Property(e => e.CaloriesBurned).HasPrecision(8, 2);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)");
+
+            entity.HasIndex(e => new { e.UserId, e.LogDate })
+                  .HasDatabaseName("idx_exercise_logs_user_date");
+
+            entity.HasOne(d => d.User)
+                  .WithMany(p => p.ExerciseLogs)
+                  .HasForeignKey(d => d.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(d => d.Exercise)
+                  .WithMany(p => p.ExerciseLogs)
+                  .HasForeignKey(d => d.ExerciseId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // --- GROUP 5: NOTIFICATION ---
+        modelBuilder.Entity<NotificationType>(entity =>
+        {
+            entity.ToTable("notification_types");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.Code).IsUnique();
+        });
+
+        modelBuilder.Entity<UserNotificationSetting>(entity =>
+        {
+            entity.ToTable("user_notification_settings");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnType("CHAR(36)");
+            entity.Property(e => e.UserId).HasColumnType("CHAR(36)");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)");
+
+            entity.HasIndex(e => new { e.UserId, e.NotificationTypeId })
+                  .IsUnique()
+                  .HasDatabaseName("idx_user_notif_setting_unique");
+
+            entity.HasOne(d => d.User)
+                  .WithMany(p => p.NotificationSettings)
+                  .HasForeignKey(d => d.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(d => d.NotificationType)
+                  .WithMany(p => p.UserSettings)
+                  .HasForeignKey(d => d.NotificationTypeId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Notification>(entity =>
+        {
+            entity.ToTable("notifications");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnType("CHAR(36)");
+            entity.Property(e => e.UserId).HasColumnType("CHAR(36)");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+
+            entity.HasIndex(e => new { e.UserId, e.CreatedAt })
+                  .HasDatabaseName("idx_notif_user_created");
+            entity.HasIndex(e => new { e.UserId, e.IsRead })
+                  .HasDatabaseName("idx_notif_user_read");
+
+            entity.HasOne(d => d.User)
+                  .WithMany(p => p.Notifications)
+                  .HasForeignKey(d => d.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(d => d.NotificationType)
+                  .WithMany(p => p.Notifications)
+                  .HasForeignKey(d => d.NotificationTypeId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
         // --- SEED DATA ---
         modelBuilder.Entity<FoodCategory>().HasData(
             new FoodCategory { Id = 1, NameVi = "Cơm & Xôi", NameEn = "Rice dishes" },
@@ -272,5 +419,55 @@ public class WaoDbContext : DbContext
             new MealType { Id = 3, NameVi = "Bữa tối" },
             new MealType { Id = 4, NameVi = "Bữa phụ" }
         );
+
+        modelBuilder.Entity<ExerciseCategory>().HasData(
+            new ExerciseCategory { Id = 1, NameVi = "Cardio", NameEn = "Cardio", DisplayOrder = 1 },
+            new ExerciseCategory { Id = 2, NameVi = "Sức mạnh", NameEn = "Strength", DisplayOrder = 2 },
+            new ExerciseCategory { Id = 3, NameVi = "Yoga & Pilates", NameEn = "Yoga & Pilates", DisplayOrder = 3 },
+            new ExerciseCategory { Id = 4, NameVi = "Thể thao", NameEn = "Sports", DisplayOrder = 4 },
+            new ExerciseCategory { Id = 5, NameVi = "Khác", NameEn = "Other", DisplayOrder = 5 }
+        );
+
+        modelBuilder.Entity<Exercise>().HasData(
+            // Cardio
+            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000001"), CategoryId = 1, NameVi = "Chạy bộ", NameEn = "Running", MetValue = 8.0m, Unit = "minutes", Status = 1, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000002"), CategoryId = 1, NameVi = "Đi bộ", NameEn = "Walking", MetValue = 3.5m, Unit = "minutes", Status = 1, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000003"), CategoryId = 1, NameVi = "Đạp xe", NameEn = "Cycling", MetValue = 7.5m, Unit = "minutes", Status = 1, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000004"), CategoryId = 1, NameVi = "Bơi lội", NameEn = "Swimming", MetValue = 9.0m, Unit = "minutes", Status = 1, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000005"), CategoryId = 1, NameVi = "Nhảy dây", NameEn = "Jump Rope", MetValue = 12.0m, Unit = "minutes", Status = 1, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            
+            // Strength
+            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000006"), CategoryId = 2, NameVi = "Tập tạ", NameEn = "Weight Training", MetValue = 6.0m, Unit = "minutes", Status = 1, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000007"), CategoryId = 2, NameVi = "Hít đất", NameEn = "Push-ups", MetValue = 8.0m, Unit = "reps", Status = 1, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000008"), CategoryId = 2, NameVi = "Gập bụng", NameEn = "Sit-ups", MetValue = 8.0m, Unit = "reps", Status = 1, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            
+            // Yoga
+            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000009"), CategoryId = 3, NameVi = "Yoga", NameEn = "Yoga", MetValue = 3.0m, Unit = "minutes", Status = 1, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000010"), CategoryId = 3, NameVi = "Pilates", NameEn = "Pilates", MetValue = 4.0m, Unit = "minutes", Status = 1, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            
+            // Sports
+            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000011"), CategoryId = 4, NameVi = "Bóng đá", NameEn = "Football/Soccer", MetValue = 10.0m, Unit = "minutes", Status = 1, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000012"), CategoryId = 4, NameVi = "Cầu lông", NameEn = "Badminton", MetValue = 7.0m, Unit = "minutes", Status = 1, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000013"), CategoryId = 4, NameVi = "Bóng rổ", NameEn = "Basketball", MetValue = 8.0m, Unit = "minutes", Status = 1, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow }
+        );
+
+        modelBuilder.Entity<NotificationType>().HasData(
+            new NotificationType { Id = 1, Code = "MEAL_REMINDER", NameVi = "Nhắc nhở bữa ăn", NameEn = "Meal Reminder", Description = "Nhắc nhở ghi nhật ký bữa ăn" },
+            new NotificationType { Id = 2, Code = "EXERCISE_REMINDER", NameVi = "Nhắc nhở tập luyện", NameEn = "Exercise Reminder", Description = "Nhắc nhở ghi nhật ký tập luyện" },
+            new NotificationType { Id = 3, Code = "WEIGHT_LOG_REMINDER", NameVi = "Nhắc nhở cân nặng", NameEn = "Weight Log Reminder", Description = "Nhắc nhở ghi lại cân nặng" },
+            new NotificationType { Id = 4, Code = "WATER_REMINDER", NameVi = "Nhắc nhở uống nước", NameEn = "Water Reminder", Description = "Nhắc nhở uống nước" },
+            new NotificationType { Id = 5, Code = "GOAL_ACHIEVED", NameVi = "Đạt mục tiêu", NameEn = "Goal Achieved", Description = "Thông báo khi đạt mục tiêu" },
+            new NotificationType { Id = 6, Code = "DAILY_SUMMARY", NameVi = "Tổng kết ngày", NameEn = "Daily Summary", Description = "Tổng kết dinh dưỡng và tập luyện trong ngày" },
+            new NotificationType { Id = 7, Code = "WEEKLY_REPORT", NameVi = "Báo cáo tuần", NameEn = "Weekly Report", Description = "Báo cáo tiến độ hàng tuần" }
+        );
+    }
+
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        configurationBuilder.Properties<DateTime>()
+            .HaveConversion<UtcDateTimeConverter>();
+
+        configurationBuilder.Properties<DateTime?>()
+            .HaveConversion<NullableUtcDateTimeConverter>();
     }
 }
