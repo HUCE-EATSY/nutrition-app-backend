@@ -15,8 +15,8 @@ using nutrition_app_backend.Services.User;
 using nutrition_app_backend.Services.WeightLog;
 using nutrition_app_backend.Services.Exercise;
 using nutrition_app_backend.Services.Notification;
-using nutrition_app_backend.Services.Admin.Core;
-using nutrition_app_backend.Services.Admin.FoodManagement;
+// using nutrition_app_backend.Services.Admin.Core;
+// using nutrition_app_backend.Services.Admin.FoodManagement;
 using nutrition_app_backend.Services.StepLog;
 using nutrition_app_backend.Services.HealthConnection;
 
@@ -76,8 +76,8 @@ builder.Services.AddScoped<IWeightLogService, WeightLogService>();
 builder.Services.AddScoped<IStorageService, CloudinaryStorageService>();
 builder.Services.AddScoped<IExerciseService, ExerciseService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
-builder.Services.AddScoped<IAdminFoodService, AdminFoodService>();
-builder.Services.AddScoped<IAdminCompositeService, AdminCompositeService>();
+// builder.Services.AddScoped<IAdminFoodService, AdminFoodService>();
+// builder.Services.AddScoped<IAdminCompositeService, AdminCompositeService>();
 builder.Services.AddScoped<IStepLogService, StepLogService>();
 builder.Services.AddScoped<IHealthConnectionService, HealthConnectionService>();
 
