@@ -31,8 +31,15 @@ public class CreateFoodRequest
     [JsonPropertyName("image")]
     public IFormFile? Image { get; set; }
 
+    /// URL ảnh đã upload sẵn lên Cloudinary (dùng cho flow nhận diện AI).
+    /// Nếu cả Image và ImageUrl đều được cung cấp, Image được ưu tiên.
+    [MaxLength(500)]
+    [JsonPropertyName("image_url")]
+    public string? ImageUrl { get; set; }
+
+    [MaxLength(50)]
     [JsonPropertyName("barcode")]
-    public ulong? Barcode { get; set; }
+    public string? Barcode { get; set; }
 
     [Required]
     [JsonPropertyName("nutrition")]

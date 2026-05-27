@@ -8,7 +8,15 @@ public interface IFoodService
     Task<PaginatedResponse<FoodSearchResponse>> SearchAsync(FoodSearchRequest request, Guid? currentUserId);
     Task<FoodDetailResponse> GetByIdAsync(Guid id);
     Task<List<FoodComponentResponse>> GetComponentsAsync(Guid foodItemId);
-    Task<FoodDetailResponse> GetByBarcodeAsync(ulong barcode);
+    Task<FoodDetailResponse?> GetByBarcodeAsync(string barcode);
+
+    /// <summary>
+    /// Calls Spoonacular's estimateNutrients API using the provided Cloudinary image URL.
+    /// Returns a pre-filled EstimatedFoodResponse for the frontend to review and submit.
+    /// Returns null if the food cannot be identified.
+    /// </summary>
+    Task<EstimatedFoodResponse?> EstimateNutrientsFromImageAsync(IFormFile image);
+
     Task<FoodDetailResponse> CreateAsync(CreateFoodRequest request, Guid userId);
     Task<FoodDetailResponse> CreateRecipeAsync(CreateRecipeRequest request, Guid userId);
     Task<List<MealTypeResponse>> GetMealTypesAsync();

@@ -48,11 +48,11 @@ public class FoodLogImageUrlResolver : IValueResolver<FoodLog, FoodLogResponse, 
 
     public string? Resolve(FoodLog src, FoodLogResponse dest, string? destMember, ResolutionContext context)
     {
-        if (src.FoodItem.Source == FoodSource.Community)
+        if (src.FoodItem.Source == FoodSource.Community || src.FoodItem.Source == FoodSource.OpenFoodFacts)
             return src.FoodItem.ThumbnailUrl;
 
         if (src.FoodItem.ActiveImage == null)
-            return null;
+            return src.FoodItem.ThumbnailUrl; // Fallback cho OFF và official có ThumbnailUrl
 
         return _storage.BuildUrl(src.FoodItem.ActiveImage.StoragePath);
     }
