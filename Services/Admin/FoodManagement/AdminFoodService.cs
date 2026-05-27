@@ -350,7 +350,7 @@ public class AdminFoodService : IAdminFoodService
         if (request.Approve)
         {
             food.Status = FoodStatus.Approved;
-            if (food.Source == FoodSource.Community && food.Barcode.HasValue)
+            if (food.Source == FoodSource.Community && food.Barcode != null)
             {
                 food.Source = FoodSource.BarcodeCommunity;
             }

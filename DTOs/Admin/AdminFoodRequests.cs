@@ -29,7 +29,7 @@ public class CreateOfficialFoodRequest
     public string ServingUnitVi { get; set; } = "g";
 
     [JsonPropertyName("barcode")]
-    public ulong? Barcode { get; set; }
+    public string? Barcode { get; set; }
 
     [JsonPropertyName("image")]
     public IFormFile? Image { get; set; }
