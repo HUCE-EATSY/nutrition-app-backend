@@ -62,6 +62,10 @@ public class WaoDbContext : DbContext
             entity.ToTable("user_auth_providers");
             entity.HasKey(e => e.Id);
             entity.Property(e => e.UserId).HasColumnType("CHAR(36)");
+            entity.Property(e => e.HashedPassword)
+                  .HasColumnName("hashed_password")
+                  .HasMaxLength(255)
+                  .IsRequired(false);
             entity.HasIndex(e => new { e.Provider, e.ProviderUid }).IsUnique();
 
             entity.HasOne(d => d.User)
