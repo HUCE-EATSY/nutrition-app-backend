@@ -7,6 +7,7 @@ public class UserAuthProvider
     public string Provider { get; set; } = null!;
     public string ProviderUid { get; set; } = null!;
     public string? Email { get; set; }
+    public string? HashedPassword { get; set; }
     public DateTime? VerifiedAt { get; set; }
     public DateTime CreatedAt { get; set; }
     
