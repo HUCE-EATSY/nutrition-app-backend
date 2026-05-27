@@ -18,7 +18,8 @@ public class FoodItem
     public string ServingUnitVi { get; set; } = "g";
     public string? ThumbnailUrl { get; set; }
     public ulong? ActiveImageId { get; set; }
-    public ulong? Barcode { get; set; }
+    [System.ComponentModel.DataAnnotations.MaxLength(50)]
+    public string? Barcode { get; set; }
     public Guid? CreatedBy { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }

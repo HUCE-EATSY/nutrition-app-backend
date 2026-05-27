@@ -66,14 +66,50 @@ public class FoodsController : ControllerBase
     }
 
     /// <summary>
-    /// Barcode lookup. Returns 404 if not found.
+    /// Barcode lookup — Cache-Aside: Local DB trước, OFF API nếu không có.
+    /// Returns 404 với canContribute: true nếu không tìm thấy ở đâu.
     /// </summary>
-    [HttpGet("barcode/{barcode:long}")]
-    public async Task<ActionResult<ApiResponse<FoodDetailResponse>>> GetByBarcode([FromRoute] ulong barcode)
+    [HttpGet("barcode/{barcode}")]
+    [ProducesResponseType(typeof(ApiResponse<FoodDetailResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ApiResponse<FoodDetailResponse>>> GetByBarcode([FromRoute] string barcode)
     {
         var result = await _foodService.GetByBarcodeAsync(barcode);
 
+        if (result == null)
+            return NotFound(ApiResponse<object>.Fail(
+                "Không tìm thấy sản phẩm. Bạn có thể đóng góp thông tin.",
+                "404",
+                new { canContribute = true, barcode }
+            ));
+
         return Ok(ApiResponse<FoodDetailResponse>.Success(result, "Tìm thấy sản phẩm"));
+    }
+
+
+    /// <summary>
+    /// Estimate nutrition from a food image URL (Cloudinary .webp).
+    /// Transforms the URL to .jpg, calls Spoonacular's estimateNutrients API,
+    /// and returns a pre-filled response the frontend can display and submit.
+    /// </summary>
+    [HttpPost("estimate-nutrients")]
+    [Consumes("multipart/form-data")]
+    [ProducesResponseType(typeof(ApiResponse<EstimatedFoodResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ApiResponse<EstimatedFoodResponse>>> EstimateNutrients(
+        [FromForm] EstimateNutrientsRequest request)
+    {
+        if (request.Image == null || request.Image.Length == 0)
+            return BadRequest(ApiResponse<object>.Fail("Không tìm thấy file ảnh.", "400"));
+
+        var result = await _foodService.EstimateNutrientsFromImageAsync(request.Image);
+
+        if (result == null)
+            return NotFound(ApiResponse<object>.Fail(
+                "Không thể nhận dạng thực phẩm từ ảnh này. Vui lòng thử ảnh khác.",
+                "404"));
+
+        return Ok(ApiResponse<EstimatedFoodResponse>.Success(result, "Phân tích dinh dưỡng thành công"));
     }
 
     /// <summary>

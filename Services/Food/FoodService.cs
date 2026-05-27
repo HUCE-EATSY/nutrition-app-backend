@@ -5,6 +5,8 @@ using nutrition_app_backend.DTOs.Foods;
 using nutrition_app_backend.Exceptions;
 using nutrition_app_backend.Models.Foods;
 using nutrition_app_backend.Services.Storage;
+using nutrition_app_backend.Services.OpenFoodFacts;
+using nutrition_app_backend.Services.Spoonacular;
 using AutoMapper;
 using nutrition_app_backend.Enums;
 
@@ -15,12 +17,30 @@ public class FoodService : IFoodService
     private readonly WaoDbContext _db;
     private readonly IMapper _mapper;
     private readonly IStorageService _storage;
+    private readonly IOpenFoodFactsService _offService;
+    private readonly ISpoonacularService _spoonacular;
 
-    public FoodService(WaoDbContext db, IMapper mapper, IStorageService storage)
+    public FoodService(WaoDbContext db, IMapper mapper,
+                       IStorageService storage,
+                       IOpenFoodFactsService offService,
+                       ISpoonacularService spoonacular)
     {
-        _db = db;
-        _mapper = mapper;
-        _storage = storage;
+        _db          = db;
+        _mapper      = mapper;
+        _storage     = storage;
+        _offService  = offService;
+        _spoonacular = spoonacular;
+    }
+
+    /// <summary>
+    /// Delegates nutrition estimation from an image to SpoonacularService.
+    /// Returns null if the food cannot be identified.
+    /// </summary>
+    public async Task<EstimatedFoodResponse?> EstimateNutrientsFromImageAsync(IFormFile image)
+    {
+        var publicId = await _storage.UploadAsync(image, folder: "wao/detections");
+        var imageUrl = _storage.BuildUrl(publicId);
+        return await _spoonacular.EstimateNutrientsAsync(imageUrl);
     }
 
     /// <summary>
@@ -306,20 +326,77 @@ public class FoodService : IFoodService
     }
 
     /// <summary>
-    /// Look up a food by barcode. Returns 404 if not found.
+    /// Tra cứu sản phẩm theo mã vạch với Cache-Aside Pattern:
+    /// 1. Cache Hit  — Trả về từ local DB ngay lập tức.
+    /// 2. Cache Miss — Gọi Open Food Facts API, map + lưu vào DB, rồi trả về.
+    /// 3. Not Found  — Trả về null nếu cả hai nguồn đều không có.
     /// </summary>
-    public async Task<FoodDetailResponse> GetByBarcodeAsync(ulong barcode)
+    public async Task<FoodDetailResponse?> GetByBarcodeAsync(string barcode)
     {
+        // Validate: barcode không được rỗng
+        if (string.IsNullOrWhiteSpace(barcode))
+            return null;
+
+        var cleanBarcode = barcode.Trim();
+
+        // STEP 1 — Cache Hit: query local DB
         var food = await _db.FoodItems
             .Include(f => f.Category)
             .Include(f => f.Nutrition)
             .Include(f => f.ActiveImage)
-            .FirstOrDefaultAsync(f => f.Barcode == barcode && f.Status == FoodStatus.Approved);
+            .AsNoTracking()
+            .FirstOrDefaultAsync(f => f.Barcode == cleanBarcode
+                                   && f.Status == FoodStatus.Approved);
 
-        if (food == null)
-            throw new NotFoundException("Không tìm thấy sản phẩm với mã vạch này.");
+        if (food != null)
+            return _mapper.Map<FoodDetailResponse>(food);
 
-        return _mapper.Map<FoodDetailResponse>(food);
+        // STEP 2 — Cache Miss: gọi Open Food Facts API
+        var offProduct = await _offService.LookupByBarcodeAsync(barcode);
+
+        if (offProduct == null)
+            return null; // Controller sẽ trả 404 + canContribute: true
+
+        // STEP 3 — Map OFF → FoodItem entity
+        var nutriments = offProduct.Product!.Nutriments;
+        var newFood = new FoodItem
+        {
+            Id            = Guid.NewGuid(),
+            NameVi        = offProduct.Product.ProductName ?? "Sản phẩm chưa có tên",
+            NameEn        = offProduct.Product.ProductNameEn,
+            Barcode       = cleanBarcode,
+            Source        = FoodSource.OpenFoodFacts,
+            Status        = FoodStatus.Approved,
+            CategoryId    = 10,             // fallback: "Khác" (Other)
+            ServingSizeG  = 100m,
+            ServingUnitVi = "g",
+            ThumbnailUrl  = offProduct.Product.ImageUrl,
+            CreatedAt     = DateTime.UtcNow,
+            UpdatedAt     = DateTime.UtcNow,
+        };
+
+        var newNutrition = new FoodNutrition
+        {
+            FoodItemId   = newFood.Id,
+            CaloriesKcal = (decimal)(nutriments?.EnergyKcal100g ?? 0),
+            ProteinG     = (decimal)(nutriments?.Proteins100g   ?? 0),
+            CarbsG       = (decimal)(nutriments?.Carbs100g      ?? 0),
+            FatG         = (decimal)(nutriments?.Fat100g        ?? 0),
+            FiberG       = nutriments?.Fiber100g  is not null ? (decimal)nutriments.Fiber100g  : null,
+            SugarG       = nutriments?.Sugars100g is not null ? (decimal)nutriments.Sugars100g : null,
+            // OFF sodium là g/100g → chuyển sang mg
+            SodiumMg     = nutriments?.Sodium100g is not null ? (decimal)nutriments.Sodium100g * 1000m : null,
+            UpdatedAt    = DateTime.UtcNow,
+        };
+
+        // STEP 4 — Save to DB
+        _db.FoodItems.Add(newFood);
+        _db.FoodNutritions.Add(newNutrition);
+        await _db.SaveChangesAsync();
+
+        // Gán Nutrition để mapper có đủ dữ liệu mà không cần reload
+        newFood.Nutrition = newNutrition;
+        return _mapper.Map<FoodDetailResponse>(newFood);
     }
 
     /// <summary>
@@ -359,11 +436,16 @@ public class FoodService : IFoodService
             // Community items: do NOT set ActiveImageId
         };
 
-        // Upload ảnh lên Cloudinary nếu có, lưu public_id vào ThumbnailUrl
+        // Upload ảnh lên Cloudinary nếu có, lưu public_id vào ThumbnailUrl.
+        // Nếu frontend đã upload trước (flow nhận diện AI), dùng ImageUrl trực tiếp.
         if (request.Image != null)
         {
             var publicId = await _storage.UploadAsync(request.Image, folder: "wao/foods");
             foodItem.ThumbnailUrl = _storage.BuildUrl(publicId);
+        }
+        else if (!string.IsNullOrWhiteSpace(request.ImageUrl))
+        {
+            foodItem.ThumbnailUrl = request.ImageUrl;
         }
 
         var nutrition = new FoodNutrition
