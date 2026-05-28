@@ -19,5 +19,8 @@ public interface IFoodService
 
     Task<FoodDetailResponse> CreateAsync(CreateFoodRequest request, Guid userId);
     Task<FoodDetailResponse> CreateRecipeAsync(CreateRecipeRequest request, Guid userId);
+    Task<FoodDetailResponse> UpdateAsync(Guid id, CreateFoodRequest request, Guid userId);
+    Task<FoodDetailResponse> UpdateRecipeAsync(Guid id, CreateRecipeRequest request, Guid userId);
+    Task DeleteAsync(Guid id, Guid userId);
     Task<List<MealTypeResponse>> GetMealTypesAsync();
 }
