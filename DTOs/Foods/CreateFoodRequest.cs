@@ -25,7 +25,7 @@ public class CreateFoodRequest
 
     [MaxLength(50)]
     [JsonPropertyName("serving_unit_vi")]
-    public string ServingUnitVi { get; set; } = "g";
+    public string? ServingUnitVi { get; set; } = "g";
 
     /// Ảnh (tuỳ chọn). Backend sẽ upload lên Cloudinary và tự build URL.
     [JsonPropertyName("image")]
@@ -48,19 +48,22 @@ public class CreateFoodRequest
 
 public class CreateFoodNutritionDto
 {
-    [Required]
+    [Required(ErrorMessage = "Calories là bắt buộc.")]
     [Range(0, 99999.99)]
     [JsonPropertyName("calories_kcal")]
     public decimal CaloriesKcal { get; set; }
 
+    [Required(ErrorMessage = "Protein là bắt buộc.")]
     [Range(0, 9999.99)]
     [JsonPropertyName("protein_g")]
     public decimal ProteinG { get; set; }
 
+    [Required(ErrorMessage = "Carbs là bắt buộc.")]
     [Range(0, 9999.99)]
     [JsonPropertyName("carbs_g")]
     public decimal CarbsG { get; set; }
 
+    [Required(ErrorMessage = "Chất béo là bắt buộc.")]
     [Range(0, 9999.99)]
     [JsonPropertyName("fat_g")]
     public decimal FatG { get; set; }

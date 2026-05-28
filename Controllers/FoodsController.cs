@@ -141,4 +141,46 @@ public class FoodsController : ControllerBase
         return StatusCode(StatusCodes.Status201Created,
             ApiResponse<FoodDetailResponse>.Success(result, "Tạo công thức thành công", "201"));
     }
+
+    /// <summary>
+    /// Update a custom food item. Only the owner can update.
+    /// Gửi dưới dạng multipart/form-data.
+    /// </summary>
+    [HttpPut("{id:guid}")]
+    [Consumes("multipart/form-data")]
+    public async Task<ActionResult<ApiResponse<FoodDetailResponse>>> Update(
+        [FromRoute] Guid id, [FromForm] CreateFoodRequest request)
+    {
+        Guid userId = User.GetUserId();
+        var result = await _foodService.UpdateAsync(id, request, userId);
+
+        return Ok(ApiResponse<FoodDetailResponse>.Success(result, "Cập nhật món ăn thành công"));
+    }
+
+    /// <summary>
+    /// Update a custom recipe. Only the owner can update.
+    /// Gửi dưới dạng multipart/form-data.
+    /// </summary>
+    [HttpPut("recipes/{id:guid}")]
+    [Consumes("multipart/form-data")]
+    public async Task<ActionResult<ApiResponse<FoodDetailResponse>>> UpdateRecipe(
+        [FromRoute] Guid id, [FromForm] CreateRecipeRequest request)
+    {
+        Guid userId = User.GetUserId();
+        var result = await _foodService.UpdateRecipeAsync(id, request, userId);
+
+        return Ok(ApiResponse<FoodDetailResponse>.Success(result, "Cập nhật công thức thành công"));
+    }
+
+    /// <summary>
+    /// Delete a custom food item or recipe. Only the owner can delete, and only if not logged.
+    /// </summary>
+    [HttpDelete("{id:guid}")]
+    public async Task<ActionResult<ApiResponse<object>>> Delete([FromRoute] Guid id)
+    {
+        Guid userId = User.GetUserId();
+        await _foodService.DeleteAsync(id, userId);
+
+        return Ok(ApiResponse<object>.Success(null!, "Xóa thành công"));
+    }
 }
