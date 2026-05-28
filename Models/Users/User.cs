@@ -29,4 +29,9 @@ public class User
     public ICollection<ExerciseLog> ExerciseLogs { get; set; } = new List<ExerciseLog>();
     public ICollection<UserNotificationSetting> NotificationSettings { get; set; } = new List<UserNotificationSetting>();
     public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
+
+    // Phase 3: Streak & Subscription
+    public UserStreak? Streak { get; set; }
+    public ICollection<StreakFreezeTransaction> StreakFreezeTransactions { get; set; } = new List<StreakFreezeTransaction>();
+    public ICollection<Subscription> Subscriptions { get; set; } = new List<Subscription>();
 }
