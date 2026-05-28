@@ -30,10 +30,10 @@ public class MappingProfile : Profile
         CreateMap<FoodItemComponent, FoodComponentResponse>()
             .ForMember(dest => dest.ChildFoodNameVi, opt => opt.MapFrom(src => src.ChildFood.NameVi))
             .ForMember(dest => dest.ChildFoodNameEn, opt => opt.MapFrom(src => src.ChildFood.NameEn))
-            .ForMember(dest => dest.CaloriesKcal, opt => opt.MapFrom(src => src.ChildFood.Nutrition.CaloriesKcal))
-            .ForMember(dest => dest.ProteinG, opt => opt.MapFrom(src => src.ChildFood.Nutrition.ProteinG))
-            .ForMember(dest => dest.CarbsG, opt => opt.MapFrom(src => src.ChildFood.Nutrition.CarbsG))
-            .ForMember(dest => dest.FatG, opt => opt.MapFrom(src => src.ChildFood.Nutrition.FatG))
+            .ForMember(dest => dest.CaloriesKcal, opt => opt.MapFrom(src => src.ChildFood.Nutrition != null ? src.ChildFood.Nutrition.CaloriesKcal : (decimal?)null))
+            .ForMember(dest => dest.ProteinG, opt => opt.MapFrom(src => src.ChildFood.Nutrition != null ? src.ChildFood.Nutrition.ProteinG : (decimal?)null))
+            .ForMember(dest => dest.CarbsG, opt => opt.MapFrom(src => src.ChildFood.Nutrition != null ? src.ChildFood.Nutrition.CarbsG : (decimal?)null))
+            .ForMember(dest => dest.FatG, opt => opt.MapFrom(src => src.ChildFood.Nutrition != null ? src.ChildFood.Nutrition.FatG : (decimal?)null))
             .ForMember(dest => dest.ChildFoodImageUrl, opt => opt.MapFrom<FoodComponentImageUrlResolver>());
 
         CreateMap<MealType, MealTypeResponse>();
