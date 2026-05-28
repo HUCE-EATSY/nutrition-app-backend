@@ -184,6 +184,7 @@ public class WaoDbContext : DbContext
             entity.HasIndex(e => new { e.NameVi, e.NameEn }).IsFullText().HasDatabaseName("idx_food_ft");
             entity.HasIndex(e => e.ActiveImageId).HasDatabaseName("idx_food_active_image");
             entity.HasIndex(e => e.Status).HasDatabaseName("idx_food_status");
+            entity.HasIndex(e => new { e.CreatedAt, e.Id }).HasDatabaseName("idx_food_cursor_pagination");
             
             entity.HasOne(d => d.Parent)
                   .WithMany(p => p.Children)

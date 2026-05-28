@@ -66,14 +66,50 @@ public class FoodsController : ControllerBase
     }
 
     /// <summary>
-    /// Barcode lookup. Returns 404 if not found.
+    /// Barcode lookup — Cache-Aside: Local DB trước, OFF API nếu không có.
+    /// Returns 404 với canContribute: true nếu không tìm thấy ở đâu.
     /// </summary>
-    [HttpGet("barcode/{barcode:long}")]
-    public async Task<ActionResult<ApiResponse<FoodDetailResponse>>> GetByBarcode([FromRoute] ulong barcode)
+    [HttpGet("barcode/{barcode}")]
+    [ProducesResponseType(typeof(ApiResponse<FoodDetailResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ApiResponse<FoodDetailResponse>>> GetByBarcode([FromRoute] string barcode)
     {
         var result = await _foodService.GetByBarcodeAsync(barcode);
 
+        if (result == null)
+            return NotFound(ApiResponse<object>.Fail(
+                "Không tìm thấy sản phẩm. Bạn có thể đóng góp thông tin.",
+                "404",
+                new { canContribute = true, barcode }
+            ));
+
         return Ok(ApiResponse<FoodDetailResponse>.Success(result, "Tìm thấy sản phẩm"));
+    }
+
+
+    /// <summary>
+    /// Estimate nutrition from a food image URL (Cloudinary .webp).
+    /// Transforms the URL to .jpg, calls Spoonacular's estimateNutrients API,
+    /// and returns a pre-filled response the frontend can display and submit.
+    /// </summary>
+    [HttpPost("estimate-nutrients")]
+    [Consumes("multipart/form-data")]
+    [ProducesResponseType(typeof(ApiResponse<EstimatedFoodResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ApiResponse<EstimatedFoodResponse>>> EstimateNutrients(
+        [FromForm] EstimateNutrientsRequest request)
+    {
+        if (request.Image == null || request.Image.Length == 0)
+            return BadRequest(ApiResponse<object>.Fail("Không tìm thấy file ảnh.", "400"));
+
+        var result = await _foodService.EstimateNutrientsFromImageAsync(request.Image);
+
+        if (result == null)
+            return NotFound(ApiResponse<object>.Fail(
+                "Không thể nhận dạng thực phẩm từ ảnh này. Vui lòng thử ảnh khác.",
+                "404"));
+
+        return Ok(ApiResponse<EstimatedFoodResponse>.Success(result, "Phân tích dinh dưỡng thành công"));
     }
 
     /// <summary>
@@ -104,5 +140,47 @@ public class FoodsController : ControllerBase
 
         return StatusCode(StatusCodes.Status201Created,
             ApiResponse<FoodDetailResponse>.Success(result, "Tạo công thức thành công", "201"));
+    }
+
+    /// <summary>
+    /// Update a custom food item. Only the owner can update.
+    /// Gửi dưới dạng multipart/form-data.
+    /// </summary>
+    [HttpPut("{id:guid}")]
+    [Consumes("multipart/form-data")]
+    public async Task<ActionResult<ApiResponse<FoodDetailResponse>>> Update(
+        [FromRoute] Guid id, [FromForm] CreateFoodRequest request)
+    {
+        Guid userId = User.GetUserId();
+        var result = await _foodService.UpdateAsync(id, request, userId);
+
+        return Ok(ApiResponse<FoodDetailResponse>.Success(result, "Cập nhật món ăn thành công"));
+    }
+
+    /// <summary>
+    /// Update a custom recipe. Only the owner can update.
+    /// Gửi dưới dạng multipart/form-data.
+    /// </summary>
+    [HttpPut("recipes/{id:guid}")]
+    [Consumes("multipart/form-data")]
+    public async Task<ActionResult<ApiResponse<FoodDetailResponse>>> UpdateRecipe(
+        [FromRoute] Guid id, [FromForm] CreateRecipeRequest request)
+    {
+        Guid userId = User.GetUserId();
+        var result = await _foodService.UpdateRecipeAsync(id, request, userId);
+
+        return Ok(ApiResponse<FoodDetailResponse>.Success(result, "Cập nhật công thức thành công"));
+    }
+
+    /// <summary>
+    /// Delete a custom food item or recipe. Only the owner can delete, and only if not logged.
+    /// </summary>
+    [HttpDelete("{id:guid}")]
+    public async Task<ActionResult<ApiResponse<object>>> Delete([FromRoute] Guid id)
+    {
+        Guid userId = User.GetUserId();
+        await _foodService.DeleteAsync(id, userId);
+
+        return Ok(ApiResponse<object>.Success(null!, "Xóa thành công"));
     }
 }
