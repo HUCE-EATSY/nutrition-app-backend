@@ -20,6 +20,8 @@ using nutrition_app_backend.Services.StepLog;
 using nutrition_app_backend.Services.HealthConnection;
 using nutrition_app_backend.Services.OpenFoodFacts;
 using nutrition_app_backend.Services.Spoonacular;
+using nutrition_app_backend.Services.Admin.Core;
+using nutrition_app_backend.Services.Admin.FoodManagement;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -80,6 +82,10 @@ builder.Services.AddScoped<INotificationService, NotificationService>();
 
 builder.Services.AddScoped<IStepLogService, StepLogService>();
 builder.Services.AddScoped<IHealthConnectionService, HealthConnectionService>();
+
+// ===== ADMIN SERVICES =====
+builder.Services.AddScoped<IAdminFoodService, AdminFoodService>();
+builder.Services.AddScoped<IAdminCompositeService, AdminCompositeService>();
 
 // ===== OPEN FOOD FACTS =====
 builder.Services.AddHttpClient("OpenFoodFacts", client =>
