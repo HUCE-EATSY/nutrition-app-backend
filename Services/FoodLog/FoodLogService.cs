@@ -133,12 +133,14 @@ public class FoodLogService : IFoodLogService
     /// </summary>
     public async Task<DailyFoodLogsResponse> GetDailyLogsAsync(Guid userId, DateOnly date)
     {
+        var start = date.ToDateTime(TimeOnly.MinValue);
+        var end = start.AddDays(1);
         var logs = await _db.FoodLogs
-            .Where(l => l.UserId == userId && l.LogDate == date)
+            .Where(l => l.UserId == userId && l.LogDate >= start && l.LogDate < end)
             .Include(l => l.FoodItem).ThenInclude(f => f.ActiveImage)
             .Include(l => l.MealType)
             .OrderBy(l => l.MealTypeId)
-            .ThenBy(l => l.CreatedAt)
+            .ThenBy(l => l.LogDate)
             .ToListAsync();
 
         var mealTypes = await _db.MealTypes.ToListAsync();
@@ -170,8 +172,10 @@ public class FoodLogService : IFoodLogService
     /// </summary>
     public async Task<DailySummaryResponse> GetDailySummaryAsync(Guid userId, DateOnly date)
     {
+        var start = date.ToDateTime(TimeOnly.MinValue);
+        var end = start.AddDays(1);
         var logs = await _db.FoodLogs
-            .Where(l => l.UserId == userId && l.LogDate == date)
+            .Where(l => l.UserId == userId && l.LogDate >= start && l.LogDate < end)
             .ToListAsync();
 
         var totalCalories = logs.Sum(l => l.CaloriesKcal);

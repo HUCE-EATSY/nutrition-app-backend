@@ -26,7 +26,7 @@ public class FoodLogResponse
     public string MealTypeName { get; set; } = null!;
 
     [JsonPropertyName("log_date")]
-    public DateOnly LogDate { get; set; }
+    public DateTime LogDate { get; set; }
 
     [JsonPropertyName("quantity_g")]
     public decimal QuantityG { get; set; }

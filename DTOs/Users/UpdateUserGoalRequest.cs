@@ -5,6 +5,7 @@ namespace nutrition_app_backend.DTOs.Users;
 public record UpdateUserGoalRequest(
     byte GoalType,
     decimal? GoalWeightKg,
+    decimal WeeklyGoalKg,
     
     [Range(100, 5000)]
     decimal TargetCalories,

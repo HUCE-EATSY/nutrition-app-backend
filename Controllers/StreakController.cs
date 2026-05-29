@@ -37,23 +37,23 @@ namespace nutrition_app_backend.Controllers
             }
 
             var todayDt = DateTime.UtcNow.Date;
-            var today = DateOnly.FromDateTime(todayDt);
             
             var weeklyProgress = new bool[7];
             var dayOfWeek = (int)todayDt.DayOfWeek;
             var indexToday = dayOfWeek == 0 ? 6 : dayOfWeek - 1;
 
-            var startOfWeek = today.AddDays(-indexToday);
+            var startOfWeekDt = todayDt.AddDays(-indexToday);
+            var endOfTodayDt = todayDt.AddDays(1);
 
             var logs = await _context.FoodLogs
-                .Where(f => f.UserId == userId && f.LogDate >= startOfWeek && f.LogDate <= today)
-                .GroupBy(f => f.LogDate)
+                .Where(f => f.UserId == userId && f.LogDate >= startOfWeekDt && f.LogDate < endOfTodayDt)
+                .GroupBy(f => f.LogDate.Date)
                 .Select(g => new { LogDate = g.Key, TotalCals = g.Sum(x => x.CaloriesKcal) })
                 .ToListAsync();
 
             foreach (var log in logs)
             {
-                var diff = log.LogDate.DayNumber - startOfWeek.DayNumber;
+                var diff = (log.LogDate - startOfWeekDt).Days;
                 if (diff >= 0 && diff < 7)
                 {
                     if (log.TotalCals > 0)
@@ -63,7 +63,6 @@ namespace nutrition_app_backend.Controllers
                 }
             }
             
-            var startOfWeekDt = startOfWeek.ToDateTime(TimeOnly.MinValue);
             var freezes = await _context.StreakFreezeTransactions
                 .Where(f => f.UserId == userId && f.FreezeDate >= startOfWeekDt && f.FreezeDate <= todayDt)
                 .Select(f => f.FreezeDate)
@@ -101,7 +100,7 @@ namespace nutrition_app_backend.Controllers
             }
 
             var yesterdayDt = DateTime.UtcNow.Date.AddDays(-1);
-            var yesterday = DateOnly.FromDateTime(yesterdayDt);
+            var yesterdayEndDt = yesterdayDt.AddDays(1);
 
             var alreadyFrozen = await _context.StreakFreezeTransactions
                 .AnyAsync(f => f.UserId == userId && f.FreezeDate.Date == yesterdayDt);
@@ -112,7 +111,7 @@ namespace nutrition_app_backend.Controllers
             }
 
             var loggedYesterday = await _context.FoodLogs
-                .AnyAsync(f => f.UserId == userId && f.LogDate == yesterday);
+                .AnyAsync(f => f.UserId == userId && f.LogDate >= yesterdayDt && f.LogDate < yesterdayEndDt);
             
             if (loggedYesterday)
             {

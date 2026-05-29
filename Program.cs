@@ -22,6 +22,7 @@ using nutrition_app_backend.Services.OpenFoodFacts;
 using nutrition_app_backend.Services.Spoonacular;
 using nutrition_app_backend.Services.Admin.Core;
 using nutrition_app_backend.Services.Admin.FoodManagement;
+using nutrition_app_backend.Services.Cron;
 
 var builder = WebApplication.CreateBuilder(args);
 

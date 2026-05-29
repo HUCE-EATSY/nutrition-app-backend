@@ -94,7 +94,8 @@ public class LogsController : ControllerBase
     /// Create a weight log. Returns 409 if already logged for the same day.
     /// </summary>
     [HttpPost("weight")]
-    public async Task<ActionResult<ApiResponse<WeightLogResponse>>> CreateWeightLog([FromBody] CreateWeightLogRequest request)
+    [Consumes("multipart/form-data")]
+    public async Task<ActionResult<ApiResponse<WeightLogResponse>>> CreateWeightLog([FromForm] CreateWeightLogRequest request)
     {
         Guid userId = User.GetUserId();
         var result = await _weightLogService.CreateAsync(userId, request);
@@ -119,12 +120,28 @@ public class LogsController : ControllerBase
     /// Update an existing weight log (weight_kg and note). Returns 404 if not found, 403 if not owner.
     /// </summary>
     [HttpPut("weight/{id:long}")]
-    public async Task<ActionResult<ApiResponse<WeightLogResponse>>> UpdateWeightLog([FromRoute] ulong id, [FromBody] UpdateWeightLogRequest request)
+    [Consumes("multipart/form-data")]
+    public async Task<ActionResult<ApiResponse<WeightLogResponse>>> UpdateWeightLog([FromRoute] ulong id, [FromForm] UpdateWeightLogRequest request)
     {
         Guid userId = User.GetUserId();
         var result = await _weightLogService.UpdateAsync(userId, id, request);
 
         return Ok(ApiResponse<WeightLogResponse>.Success(result, "Cập nhật cân nặng thành công"));
+    }
+
+    /// <summary>
+    /// Upload body photo for a weight log to Cloudinary.
+    /// Gửi dưới dạng multipart/form-data với field "photo".
+    /// </summary>
+    [HttpPost("weight/{id:long}/photo")]
+    [Consumes("multipart/form-data")]
+    public async Task<ActionResult<ApiResponse<WeightLogResponse>>> UploadWeightPhoto(
+        [FromRoute] ulong id, Microsoft.AspNetCore.Http.IFormFile photo)
+    {
+        Guid userId = User.GetUserId();
+        var result = await _weightLogService.UploadPhotoAsync(userId, id, photo);
+
+        return Ok(ApiResponse<WeightLogResponse>.Success(result, "Tải ảnh cơ thể thành công"));
     }
 
     // ========== STEP LOGS ==========

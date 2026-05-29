@@ -103,6 +103,7 @@ public class WaoDbContext : DbContext
             entity.Property(e => e.UserId).HasColumnType("CHAR(36)");
             entity.Property(e => e.WeightKg).HasPrecision(5, 2);
             entity.Property(e => e.GoalWeightKg).HasPrecision(5, 2);
+            entity.Property(e => e.WeeklyGoalKg).HasPrecision(3, 2);
             entity.Property(e => e.BmrKcal).HasPrecision(7, 2);
             entity.Property(e => e.TdeeKcal).HasPrecision(7, 2);
             entity.Property(e => e.TargetCalories).HasPrecision(7, 2);
@@ -122,6 +123,7 @@ public class WaoDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.UserId).HasColumnType("CHAR(36)");
             entity.Property(e => e.WeightKg).HasPrecision(5, 2);
+            entity.Property(e => e.PhotoUrl).HasMaxLength(2048).IsRequired(false);
             // Chỉ cần 1 Index Unique là đủ cho cả query và tính duy nhất
             entity.HasIndex(e => new { e.UserId, e.LogDate }).IsUnique().HasDatabaseName("idx_weight_user_date");
 

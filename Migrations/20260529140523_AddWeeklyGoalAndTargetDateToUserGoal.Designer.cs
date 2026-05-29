@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using nutrition_app_backend.Data;
 
@@ -11,9 +12,11 @@ using nutrition_app_backend.Data;
 namespace nutrition_app_backend.Migrations
 {
     [DbContext(typeof(WaoDbContext))]
-    partial class WaoDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260529140523_AddWeeklyGoalAndTargetDateToUserGoal")]
+    partial class AddWeeklyGoalAndTargetDateToUserGoal
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -51,8 +54,8 @@ namespace nutrition_app_backend.Migrations
                     b.Property<byte>("InputMethod")
                         .HasColumnType("tinyint unsigned");
 
-                    b.Property<DateTime>("LogDate")
-                        .HasColumnType("datetime(6)");
+                    b.Property<DateOnly>("LogDate")
+                        .HasColumnType("date");
 
                     b.Property<byte>("MealTypeId")
                         .HasColumnType("tinyint unsigned");
@@ -178,10 +181,6 @@ namespace nutrition_app_backend.Migrations
                     b.Property<string>("Note")
                         .HasColumnType("longtext");
 
-                    b.Property<string>("PhotoUrl")
-                        .HasMaxLength(2048)
-                        .HasColumnType("varchar(2048)");
-
                     b.Property<Guid>("UserId")
                         .HasColumnType("CHAR(36)");
 
@@ -257,157 +256,157 @@ namespace nutrition_app_backend.Migrations
                         {
                             Id = new Guid("10000000-0000-0000-0000-000000000001"),
                             CategoryId = 1,
-                            CreatedAt = new DateTime(2026, 5, 29, 14, 26, 49, 2, DateTimeKind.Utc).AddTicks(7207),
+                            CreatedAt = new DateTime(2026, 5, 29, 14, 5, 21, 583, DateTimeKind.Utc).AddTicks(5822),
                             MetValue = 8.0m,
                             NameEn = "Running",
                             NameVi = "Chạy bộ",
                             Status = (byte)1,
                             Unit = "minutes",
-                            UpdatedAt = new DateTime(2026, 5, 29, 14, 26, 49, 2, DateTimeKind.Utc).AddTicks(7210)
+                            UpdatedAt = new DateTime(2026, 5, 29, 14, 5, 21, 583, DateTimeKind.Utc).AddTicks(5827)
                         },
                         new
                         {
                             Id = new Guid("10000000-0000-0000-0000-000000000002"),
                             CategoryId = 1,
-                            CreatedAt = new DateTime(2026, 5, 29, 14, 26, 49, 2, DateTimeKind.Utc).AddTicks(7216),
+                            CreatedAt = new DateTime(2026, 5, 29, 14, 5, 21, 583, DateTimeKind.Utc).AddTicks(5831),
                             MetValue = 3.5m,
                             NameEn = "Walking",
                             NameVi = "Đi bộ",
                             Status = (byte)1,
                             Unit = "minutes",
-                            UpdatedAt = new DateTime(2026, 5, 29, 14, 26, 49, 2, DateTimeKind.Utc).AddTicks(7217)
+                            UpdatedAt = new DateTime(2026, 5, 29, 14, 5, 21, 583, DateTimeKind.Utc).AddTicks(5832)
                         },
                         new
                         {
                             Id = new Guid("10000000-0000-0000-0000-000000000003"),
                             CategoryId = 1,
-                            CreatedAt = new DateTime(2026, 5, 29, 14, 26, 49, 2, DateTimeKind.Utc).AddTicks(7220),
+                            CreatedAt = new DateTime(2026, 5, 29, 14, 5, 21, 583, DateTimeKind.Utc).AddTicks(5835),
                             MetValue = 7.5m,
                             NameEn = "Cycling",
                             NameVi = "Đạp xe",
                             Status = (byte)1,
                             Unit = "minutes",
-                            UpdatedAt = new DateTime(2026, 5, 29, 14, 26, 49, 2, DateTimeKind.Utc).AddTicks(7221)
+                            UpdatedAt = new DateTime(2026, 5, 29, 14, 5, 21, 583, DateTimeKind.Utc).AddTicks(5836)
                         },
                         new
                         {
                             Id = new Guid("10000000-0000-0000-0000-000000000004"),
                             CategoryId = 1,
-                            CreatedAt = new DateTime(2026, 5, 29, 14, 26, 49, 2, DateTimeKind.Utc).AddTicks(7224),
+                            CreatedAt = new DateTime(2026, 5, 29, 14, 5, 21, 583, DateTimeKind.Utc).AddTicks(5839),
                             MetValue = 9.0m,
                             NameEn = "Swimming",
                             NameVi = "Bơi lội",
                             Status = (byte)1,
                             Unit = "minutes",
-                            UpdatedAt = new DateTime(2026, 5, 29, 14, 26, 49, 2, DateTimeKind.Utc).AddTicks(7225)
+                            UpdatedAt = new DateTime(2026, 5, 29, 14, 5, 21, 583, DateTimeKind.Utc).AddTicks(5840)
                         },
                         new
                         {
                             Id = new Guid("10000000-0000-0000-0000-000000000005"),
                             CategoryId = 1,
-                            CreatedAt = new DateTime(2026, 5, 29, 14, 26, 49, 2, DateTimeKind.Utc).AddTicks(7230),
+                            CreatedAt = new DateTime(2026, 5, 29, 14, 5, 21, 583, DateTimeKind.Utc).AddTicks(5843),
                             MetValue = 12.0m,
                             NameEn = "Jump Rope",
                             NameVi = "Nhảy dây",
                             Status = (byte)1,
                             Unit = "minutes",
-                            UpdatedAt = new DateTime(2026, 5, 29, 14, 26, 49, 2, DateTimeKind.Utc).AddTicks(7230)
+                            UpdatedAt = new DateTime(2026, 5, 29, 14, 5, 21, 583, DateTimeKind.Utc).AddTicks(5844)
                         },
                         new
                         {
                             Id = new Guid("10000000-0000-0000-0000-000000000006"),
                             CategoryId = 2,
-                            CreatedAt = new DateTime(2026, 5, 29, 14, 26, 49, 2, DateTimeKind.Utc).AddTicks(7235),
+                            CreatedAt = new DateTime(2026, 5, 29, 14, 5, 21, 583, DateTimeKind.Utc).AddTicks(5847),
                             MetValue = 6.0m,
                             NameEn = "Weight Training",
                             NameVi = "Tập tạ",
                             Status = (byte)1,
                             Unit = "minutes",
-                            UpdatedAt = new DateTime(2026, 5, 29, 14, 26, 49, 2, DateTimeKind.Utc).AddTicks(7235)
+                            UpdatedAt = new DateTime(2026, 5, 29, 14, 5, 21, 583, DateTimeKind.Utc).AddTicks(5848)
                         },
                         new
                         {
                             Id = new Guid("10000000-0000-0000-0000-000000000007"),
                             CategoryId = 2,
-                            CreatedAt = new DateTime(2026, 5, 29, 14, 26, 49, 2, DateTimeKind.Utc).AddTicks(7241),
+                            CreatedAt = new DateTime(2026, 5, 29, 14, 5, 21, 583, DateTimeKind.Utc).AddTicks(5851),
                             MetValue = 8.0m,
                             NameEn = "Push-ups",
                             NameVi = "Hít đất",
                             Status = (byte)1,
                             Unit = "reps",
-                            UpdatedAt = new DateTime(2026, 5, 29, 14, 26, 49, 2, DateTimeKind.Utc).AddTicks(7242)
+                            UpdatedAt = new DateTime(2026, 5, 29, 14, 5, 21, 583, DateTimeKind.Utc).AddTicks(5851)
                         },
                         new
                         {
                             Id = new Guid("10000000-0000-0000-0000-000000000008"),
                             CategoryId = 2,
-                            CreatedAt = new DateTime(2026, 5, 29, 14, 26, 49, 2, DateTimeKind.Utc).AddTicks(7245),
+                            CreatedAt = new DateTime(2026, 5, 29, 14, 5, 21, 583, DateTimeKind.Utc).AddTicks(5855),
                             MetValue = 8.0m,
                             NameEn = "Sit-ups",
                             NameVi = "Gập bụng",
                             Status = (byte)1,
                             Unit = "reps",
-                            UpdatedAt = new DateTime(2026, 5, 29, 14, 26, 49, 2, DateTimeKind.Utc).AddTicks(7246)
+                            UpdatedAt = new DateTime(2026, 5, 29, 14, 5, 21, 583, DateTimeKind.Utc).AddTicks(5855)
                         },
                         new
                         {
                             Id = new Guid("10000000-0000-0000-0000-000000000009"),
                             CategoryId = 3,
-                            CreatedAt = new DateTime(2026, 5, 29, 14, 26, 49, 2, DateTimeKind.Utc).AddTicks(7249),
+                            CreatedAt = new DateTime(2026, 5, 29, 14, 5, 21, 583, DateTimeKind.Utc).AddTicks(5859),
                             MetValue = 3.0m,
                             NameEn = "Yoga",
                             NameVi = "Yoga",
                             Status = (byte)1,
                             Unit = "minutes",
-                            UpdatedAt = new DateTime(2026, 5, 29, 14, 26, 49, 2, DateTimeKind.Utc).AddTicks(7250)
+                            UpdatedAt = new DateTime(2026, 5, 29, 14, 5, 21, 583, DateTimeKind.Utc).AddTicks(5860)
                         },
                         new
                         {
                             Id = new Guid("10000000-0000-0000-0000-000000000010"),
                             CategoryId = 3,
-                            CreatedAt = new DateTime(2026, 5, 29, 14, 26, 49, 2, DateTimeKind.Utc).AddTicks(7253),
+                            CreatedAt = new DateTime(2026, 5, 29, 14, 5, 21, 583, DateTimeKind.Utc).AddTicks(5863),
                             MetValue = 4.0m,
                             NameEn = "Pilates",
                             NameVi = "Pilates",
                             Status = (byte)1,
                             Unit = "minutes",
-                            UpdatedAt = new DateTime(2026, 5, 29, 14, 26, 49, 2, DateTimeKind.Utc).AddTicks(7254)
+                            UpdatedAt = new DateTime(2026, 5, 29, 14, 5, 21, 583, DateTimeKind.Utc).AddTicks(5864)
                         },
                         new
                         {
                             Id = new Guid("10000000-0000-0000-0000-000000000011"),
                             CategoryId = 4,
-                            CreatedAt = new DateTime(2026, 5, 29, 14, 26, 49, 2, DateTimeKind.Utc).AddTicks(7257),
+                            CreatedAt = new DateTime(2026, 5, 29, 14, 5, 21, 583, DateTimeKind.Utc).AddTicks(5867),
                             MetValue = 10.0m,
                             NameEn = "Football/Soccer",
                             NameVi = "Bóng đá",
                             Status = (byte)1,
                             Unit = "minutes",
-                            UpdatedAt = new DateTime(2026, 5, 29, 14, 26, 49, 2, DateTimeKind.Utc).AddTicks(7258)
+                            UpdatedAt = new DateTime(2026, 5, 29, 14, 5, 21, 583, DateTimeKind.Utc).AddTicks(5868)
                         },
                         new
                         {
                             Id = new Guid("10000000-0000-0000-0000-000000000012"),
                             CategoryId = 4,
-                            CreatedAt = new DateTime(2026, 5, 29, 14, 26, 49, 2, DateTimeKind.Utc).AddTicks(7261),
+                            CreatedAt = new DateTime(2026, 5, 29, 14, 5, 21, 583, DateTimeKind.Utc).AddTicks(5871),
                             MetValue = 7.0m,
                             NameEn = "Badminton",
                             NameVi = "Cầu lông",
                             Status = (byte)1,
                             Unit = "minutes",
-                            UpdatedAt = new DateTime(2026, 5, 29, 14, 26, 49, 2, DateTimeKind.Utc).AddTicks(7262)
+                            UpdatedAt = new DateTime(2026, 5, 29, 14, 5, 21, 583, DateTimeKind.Utc).AddTicks(5872)
                         },
                         new
                         {
                             Id = new Guid("10000000-0000-0000-0000-000000000013"),
                             CategoryId = 4,
-                            CreatedAt = new DateTime(2026, 5, 29, 14, 26, 49, 2, DateTimeKind.Utc).AddTicks(7265),
+                            CreatedAt = new DateTime(2026, 5, 29, 14, 5, 21, 583, DateTimeKind.Utc).AddTicks(5875),
                             MetValue = 8.0m,
                             NameEn = "Basketball",
                             NameVi = "Bóng rổ",
                             Status = (byte)1,
                             Unit = "minutes",
-                            UpdatedAt = new DateTime(2026, 5, 29, 14, 26, 49, 2, DateTimeKind.Utc).AddTicks(7266)
+                            UpdatedAt = new DateTime(2026, 5, 29, 14, 5, 21, 583, DateTimeKind.Utc).AddTicks(5875)
                         });
                 });
 

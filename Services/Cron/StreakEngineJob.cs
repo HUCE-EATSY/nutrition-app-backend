@@ -60,7 +60,8 @@ namespace nutrition_app_backend.Services.Cron
             var context = scope.ServiceProvider.GetRequiredService<WaoDbContext>();
 
             var yesterday = DateTime.UtcNow.Date.AddDays(-1);
-            var yesterdayOnly = DateOnly.FromDateTime(yesterday);
+            var yesterdayStart = yesterday;
+            var yesterdayEnd = yesterday.AddDays(1);
 
             var streaks = await context.UserStreaks.Include(s => s.User).ThenInclude(u => u.Goals).ToListAsync(stoppingToken);
 
@@ -76,7 +77,7 @@ namespace nutrition_app_backend.Services.Cron
                 decimal targetKcal = bmr * 0.5m;
 
                 var totalCals = await context.FoodLogs
-                    .Where(f => f.UserId == streak.UserId && f.LogDate == yesterdayOnly)
+                    .Where(f => f.UserId == streak.UserId && f.LogDate >= yesterdayStart && f.LogDate < yesterdayEnd)
                     .SumAsync(f => f.CaloriesKcal, stoppingToken);
 
                 if (totalCals >= targetKcal)
