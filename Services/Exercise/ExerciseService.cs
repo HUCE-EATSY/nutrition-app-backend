@@ -17,15 +17,10 @@ public class ExerciseService : IExerciseService
 
     public async Task<List<ExerciseCategoryResponse>> GetExerciseCategoriesAsync()
     {
-        // Load categories first
+        // Dùng Include() để tránh N+1 query
         var categories = await _context.ExerciseCategories
+            .Include(c => c.Exercises.Where(e => e.Status == 1))
             .OrderBy(c => c.DisplayOrder)
-            .ToListAsync();
-
-        // Load all active exercises
-        var exercises = await _context.Exercises
-            .Where(e => e.Status == 1)
-            .OrderBy(e => e.NameVi)
             .ToListAsync();
 
         // Map to response DTOs
@@ -35,8 +30,8 @@ public class ExerciseService : IExerciseService
             NameVi = c.NameVi,
             NameEn = c.NameEn,
             IconUrl = c.IconUrl,
-            Exercises = exercises
-                .Where(e => e.CategoryId == c.Id)
+            Exercises = c.Exercises
+                .OrderBy(e => e.NameVi)
                 .Select(e => new ExerciseResponse
                 {
                     Id = e.Id,
@@ -126,6 +121,7 @@ public class ExerciseService : IExerciseService
             ExerciseId = log.ExerciseId,
             ExerciseNameVi = exercise.NameVi,
             ExerciseNameEn = exercise.NameEn,
+            ExerciseIconUrl = exercise.IconUrl,
             LogDate = log.LogDate,
             DurationMinutes = log.DurationMinutes,
             Intensity = log.Intensity,
@@ -146,6 +142,7 @@ public class ExerciseService : IExerciseService
                 ExerciseId = l.ExerciseId,
                 ExerciseNameVi = l.Exercise.NameVi,
                 ExerciseNameEn = l.Exercise.NameEn,
+                ExerciseIconUrl = l.Exercise.IconUrl,
                 LogDate = l.LogDate,
                 DurationMinutes = l.DurationMinutes,
                 Intensity = l.Intensity,
@@ -180,9 +177,10 @@ public class ExerciseService : IExerciseService
                 log.Intensity = request.Intensity.Value;
 
             // Tính lại calories
-            var userProfile = await _context.UserProfiles.FindAsync(userId);
+            var userProfile = await _context.UserProfiles.FindAsync(userId)
+                ?? throw new BusinessException("USER_PROFILE_NOT_FOUND", "User profile not found");
             var durationHours = log.DurationMinutes / 60.0m;
-            var caloriesBurned = log.Exercise.MetValue * userProfile!.WeightKg * durationHours;
+            var caloriesBurned = log.Exercise.MetValue * userProfile.WeightKg * durationHours;
 
             caloriesBurned = log.Intensity switch
             {
@@ -206,6 +204,7 @@ public class ExerciseService : IExerciseService
             ExerciseId = log.ExerciseId,
             ExerciseNameVi = log.Exercise.NameVi,
             ExerciseNameEn = log.Exercise.NameEn,
+            ExerciseIconUrl = log.Exercise.IconUrl,
             LogDate = log.LogDate,
             DurationMinutes = log.DurationMinutes,
             Intensity = log.Intensity,
@@ -239,6 +238,7 @@ public class ExerciseService : IExerciseService
                 ExerciseId = l.ExerciseId,
                 ExerciseNameVi = l.Exercise.NameVi,
                 ExerciseNameEn = l.Exercise.NameEn,
+                ExerciseIconUrl = l.Exercise.IconUrl,
                 LogDate = l.LogDate,
                 DurationMinutes = l.DurationMinutes,
                 Intensity = l.Intensity,
@@ -273,12 +273,14 @@ public class ExerciseService : IExerciseService
         var logs = await query
             .OrderByDescending(l => l.LogDate)
             .ThenByDescending(l => l.CreatedAt)
+            .Take(500) // Giới hạn tối đa 500 records
             .Select(l => new ExerciseLogResponse
             {
                 Id = l.Id,
                 ExerciseId = l.ExerciseId,
                 ExerciseNameVi = l.Exercise.NameVi,
                 ExerciseNameEn = l.Exercise.NameEn,
+                ExerciseIconUrl = l.Exercise.IconUrl,
                 LogDate = l.LogDate,
                 DurationMinutes = l.DurationMinutes,
                 Intensity = l.Intensity,

@@ -9,7 +9,7 @@ namespace nutrition_app_backend.Controllers;
 
 [ApiController]
 [Route("api/exercises")]
-[AllowAnonymous]
+[Authorize]
 public class ExercisesController : ControllerBase
 {
     private readonly IExerciseService _exerciseService;
@@ -38,7 +38,6 @@ public class ExercisesController : ControllerBase
     public async Task<ActionResult<ApiResponse<ExerciseResponse>>> GetExercise(Guid id)
     {
         var result = await _exerciseService.GetExerciseByIdAsync(id);
-
         return Ok(ApiResponse<ExerciseResponse>.Success(result, "Lấy chi tiết bài tập thành công"));
     }
 
@@ -48,18 +47,7 @@ public class ExercisesController : ControllerBase
     [HttpPost("logs")]
     public async Task<ActionResult<ApiResponse<ExerciseLogResponse>>> CreateExerciseLog([FromBody] CreateExerciseLogRequest request)
     {
-        // For anonymous users, use a mock userId
-        var userId = User.Identity?.IsAuthenticated == true 
-            ? User.GetUserId() 
-            : Guid.Empty;
-            
-        if (userId == Guid.Empty)
-        {
-            // Anonymous users cannot create logs - return success but don't save
-            return StatusCode(StatusCodes.Status201Created,
-                ApiResponse<ExerciseLogResponse>.Success(null!, "Vui lòng đăng nhập để lưu nhật ký", "201"));
-        }
-        
+        var userId = User.GetUserId();
         var result = await _exerciseService.CreateExerciseLogAsync(userId, request);
 
         return StatusCode(StatusCodes.Status201Created,
@@ -72,16 +60,7 @@ public class ExercisesController : ControllerBase
     [HttpGet("logs/{id}")]
     public async Task<ActionResult<ApiResponse<ExerciseLogResponse>>> GetExerciseLog(Guid id)
     {
-        // For anonymous users, return unauthorized
-        var userId = User.Identity?.IsAuthenticated == true 
-            ? User.GetUserId() 
-            : Guid.Empty;
-            
-        if (userId == Guid.Empty)
-        {
-            return Unauthorized(ApiResponse<ExerciseLogResponse>.Fail("Vui lòng đăng nhập để xem nhật ký", "401"));
-        }
-        
+        var userId = User.GetUserId();
         var result = await _exerciseService.GetExerciseLogByIdAsync(userId, id);
 
         return Ok(ApiResponse<ExerciseLogResponse>.Success(result, "Lấy chi tiết nhật ký thành công"));
@@ -93,16 +72,7 @@ public class ExercisesController : ControllerBase
     [HttpPut("logs/{id}")]
     public async Task<ActionResult<ApiResponse<ExerciseLogResponse>>> UpdateExerciseLog(Guid id, [FromBody] UpdateExerciseLogRequest request)
     {
-        // For anonymous users, return unauthorized
-        var userId = User.Identity?.IsAuthenticated == true 
-            ? User.GetUserId() 
-            : Guid.Empty;
-            
-        if (userId == Guid.Empty)
-        {
-            return Unauthorized(ApiResponse<ExerciseLogResponse>.Fail("Vui lòng đăng nhập để cập nhật nhật ký", "401"));
-        }
-        
+        var userId = User.GetUserId();
         var result = await _exerciseService.UpdateExerciseLogAsync(userId, id, request);
 
         return Ok(ApiResponse<ExerciseLogResponse>.Success(result, "Cập nhật nhật ký thành công"));
@@ -114,16 +84,7 @@ public class ExercisesController : ControllerBase
     [HttpDelete("logs/{id}")]
     public async Task<ActionResult<ApiResponse<object>>> DeleteExerciseLog(Guid id)
     {
-        // For anonymous users, return unauthorized
-        var userId = User.Identity?.IsAuthenticated == true 
-            ? User.GetUserId() 
-            : Guid.Empty;
-            
-        if (userId == Guid.Empty)
-        {
-            return Unauthorized(ApiResponse<object>.Fail("Vui lòng đăng nhập để xóa nhật ký", "401"));
-        }
-        
+        var userId = User.GetUserId();
         await _exerciseService.DeleteExerciseLogAsync(userId, id);
 
         return Ok(ApiResponse<object>.Success(null!, "Xóa nhật ký thành công"));
@@ -135,25 +96,7 @@ public class ExercisesController : ControllerBase
     [HttpGet("logs/daily/{date}")]
     public async Task<ActionResult<ApiResponse<DailyExerciseSummaryResponse>>> GetDailyExerciseSummary(DateOnly date)
     {
-        // For anonymous users, return empty summary
-        var userId = User.Identity?.IsAuthenticated == true 
-            ? User.GetUserId() 
-            : Guid.Empty;
-            
-        if (userId == Guid.Empty)
-        {
-            // Return empty summary for anonymous users
-            var emptySummary = new DailyExerciseSummaryResponse
-            {
-                Date = date,
-                TotalCaloriesBurned = 0,
-                TotalDurationMinutes = 0,
-                ExerciseCount = 0,
-                Logs = new List<ExerciseLogResponse>()
-            };
-            return Ok(ApiResponse<DailyExerciseSummaryResponse>.Success(emptySummary, "Vui lòng đăng nhập để xem nhật ký tập luyện"));
-        }
-        
+        var userId = User.GetUserId();
         var result = await _exerciseService.GetDailyExerciseSummaryAsync(userId, date);
 
         return Ok(ApiResponse<DailyExerciseSummaryResponse>.Success(result, "Lấy tổng hợp tập luyện thành công"));
@@ -167,18 +110,7 @@ public class ExercisesController : ControllerBase
         [FromQuery] DateOnly? startDate,
         [FromQuery] DateOnly? endDate)
     {
-        // For anonymous users, return empty list
-        var userId = User.Identity?.IsAuthenticated == true 
-            ? User.GetUserId() 
-            : Guid.Empty;
-            
-        if (userId == Guid.Empty)
-        {
-            return Ok(ApiResponse<List<ExerciseLogResponse>>.Success(
-                new List<ExerciseLogResponse>(), 
-                "Vui lòng đăng nhập để xem lịch sử tập luyện"));
-        }
-        
+        var userId = User.GetUserId();
         var result = await _exerciseService.GetExerciseLogsAsync(userId, startDate, endDate);
 
         return Ok(ApiResponse<List<ExerciseLogResponse>>.Success(result, "Lấy lịch sử tập luyện thành công"));
