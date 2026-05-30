@@ -27,4 +27,5 @@ public class User
     public ICollection<ExerciseLog> ExerciseLogs { get; set; } = new List<ExerciseLog>();
     public ICollection<UserNotificationSetting> NotificationSettings { get; set; } = new List<UserNotificationSetting>();
     public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
+    public ICollection<UserDeviceToken> DeviceTokens { get; set; } = new List<UserDeviceToken>();
 }

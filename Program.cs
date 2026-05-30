@@ -15,6 +15,7 @@ using nutrition_app_backend.Services.User;
 using nutrition_app_backend.Services.WeightLog;
 using nutrition_app_backend.Services.Exercise;
 using nutrition_app_backend.Services.Notification;
+using nutrition_app_backend.Services.Admin;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -72,6 +73,12 @@ builder.Services.AddScoped<IWeightLogService, WeightLogService>();
 builder.Services.AddScoped<IStorageService, CloudinaryStorageService>();
 builder.Services.AddScoped<IExerciseService, ExerciseService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<IAdminUserService, AdminUserService>();
+builder.Services.AddScoped<IAdminFoodService, AdminFoodService>();
+builder.Services.AddScoped<IAdminExerciseService, AdminExerciseService>();
+builder.Services.AddScoped<IAdminDashboardService, AdminDashboardService>();
+builder.Services.AddHttpClient();
+builder.Services.AddHostedService<NotificationBackgroundService>();
 
 // =====================
 // AUTOMAPPER

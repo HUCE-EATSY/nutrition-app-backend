@@ -152,6 +152,57 @@ public class FoodService : IFoodService
     }
 
     /// <summary>
+    /// Get all approved food items without fulltext search — used by the user-side "explore" tab.
+    /// Uses EF Core LINQ to avoid raw SQL column name issues. Returns paginated results ordered by NameVi.
+    /// </summary>
+    public async Task<PaginatedResponse<FoodSearchResponse>> GetAllAsync(int page, int pageSize, byte? categoryId)
+    {
+        var query = _db.FoodItems
+            .Include(f => f.Nutrition)
+            .Include(f => f.ActiveImage)
+            .Where(f => f.Status == 1);
+
+        if (categoryId.HasValue)
+            query = query.Where(f => f.CategoryId == categoryId.Value);
+
+        var totalCount = await query.CountAsync();
+
+        var foods = await query
+            .OrderBy(f => f.NameVi)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        var items = foods.Select(f =>
+        {
+            string? resolvedImageUrl = f.Source == 3
+                ? f.ThumbnailUrl
+                : (f.ActiveImage?.StoragePath != null ? _storage.BuildUrl(f.ActiveImage.StoragePath) : null);
+
+            return new FoodSearchResponse
+            {
+                Id = f.Id,
+                NameVi = f.NameVi,
+                NameEn = f.NameEn,
+                CategoryId = f.CategoryId,
+                Source = f.Source,
+                ServingSizeG = f.ServingSizeG,
+                ServingUnitVi = f.ServingUnitVi ?? "g",
+                CaloriesKcal = f.Nutrition?.CaloriesKcal,
+                ImageUrl = resolvedImageUrl
+            };
+        }).ToList();
+
+        return new PaginatedResponse<FoodSearchResponse>
+        {
+            Items = items,
+            Page = page,
+            PageSize = pageSize,
+            TotalCount = totalCount
+        };
+    }
+
+    /// <summary>
     /// Get food detail by ID with nutrition and resolved image URL.
     /// </summary>
     public async Task<FoodDetailResponse> GetByIdAsync(Guid id)

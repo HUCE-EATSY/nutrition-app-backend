@@ -185,4 +185,36 @@ public class NotificationService : INotificationService
             .Where(n => n.UserId == userId && !n.IsRead)
             .CountAsync();
     }
+
+    public async Task RegisterDeviceTokenAsync(Guid userId, RegisterDeviceTokenRequest request)
+    {
+        var existingToken = await _context.UserDeviceTokens
+            .FirstOrDefaultAsync(t => t.DeviceToken == request.Token);
+
+        if (existingToken != null)
+            {
+                if (existingToken.UserId != userId)
+                {
+                    // Token exists but belongs to another user (maybe they logged out and logged in with different account)
+                    existingToken.UserId = userId;
+                    existingToken.DeviceType = request.DeviceType;
+                    existingToken.UpdatedAt = DateTime.UtcNow;
+                    await _context.SaveChangesAsync();
+                }
+                return;
+            }
+
+        var newToken = new UserDeviceToken
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            DeviceToken = request.Token,
+            DeviceType = request.DeviceType,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        _context.UserDeviceTokens.Add(newToken);
+        await _context.SaveChangesAsync();
+    }
 }

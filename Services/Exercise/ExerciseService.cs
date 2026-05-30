@@ -81,14 +81,13 @@ public class ExerciseService : IExerciseService
         if (exercise == null || exercise.Status != 1)
             throw new NotFoundException("Exercise not found");
 
-        // Lấy cân nặng hiện tại của user
+        // Lấy cân nặng hiện tại của user (mặc định 65kg nếu chưa có profile)
         var userProfile = await _context.UserProfiles.FindAsync(userId);
-        if (userProfile == null)
-            throw new BusinessException("USER_PROFILE_NOT_FOUND", "User profile not found");
+        var weightKg = userProfile?.WeightKg ?? 65m;
 
         // Tính calories đốt cháy: Calories = MET × Weight(kg) × Duration(hours)
         var durationHours = request.DurationMinutes / 60.0m;
-        var caloriesBurned = exercise.MetValue * userProfile.WeightKg * durationHours;
+        var caloriesBurned = exercise.MetValue * weightKg * durationHours;
 
         // Điều chỉnh theo cường độ
         caloriesBurned = request.Intensity switch
@@ -177,10 +176,10 @@ public class ExerciseService : IExerciseService
                 log.Intensity = request.Intensity.Value;
 
             // Tính lại calories
-            var userProfile = await _context.UserProfiles.FindAsync(userId)
-                ?? throw new BusinessException("USER_PROFILE_NOT_FOUND", "User profile not found");
+            var userProfile = await _context.UserProfiles.FindAsync(userId);
+            var weightKg = userProfile?.WeightKg ?? 65m;
             var durationHours = log.DurationMinutes / 60.0m;
-            var caloriesBurned = log.Exercise.MetValue * userProfile.WeightKg * durationHours;
+            var caloriesBurned = log.Exercise.MetValue * weightKg * durationHours;
 
             caloriesBurned = log.Intensity switch
             {

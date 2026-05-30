@@ -106,4 +106,16 @@ public class NotificationsController : ControllerBase
 
         return Ok(ApiResponse<int>.Success(count, "Lấy số lượng thông báo chưa đọc thành công"));
     }
+
+    /// <summary>
+    /// Đăng ký Device Token cho Push Notification
+    /// </summary>
+    [HttpPost("register-token")]
+    public async Task<ActionResult<ApiResponse<object>>> RegisterToken([FromBody] RegisterDeviceTokenRequest request)
+    {
+        var userId = User.GetUserId();
+        await _notificationService.RegisterDeviceTokenAsync(userId, request);
+
+        return Ok(ApiResponse<object>.Success(null!, "Đăng ký token thành công"));
+    }
 }

@@ -20,6 +20,20 @@ public class FoodsController : ControllerBase
     }
 
     /// <summary>
+    /// Get all approved food items (no search query required). Used by the user-side explore tab.
+    /// Supports pagination and optional category filter.
+    /// </summary>
+    [HttpGet]
+    public async Task<ActionResult<ApiResponse<PaginatedResponse<FoodSearchResponse>>>> GetAll(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 50,
+        [FromQuery] byte? categoryId = null)
+    {
+        var result = await _foodService.GetAllAsync(page, pageSize, categoryId);
+        return Ok(ApiResponse<PaginatedResponse<FoodSearchResponse>>.Success(result, "Lấy danh sách món ăn thành công"));
+    }
+
+    /// <summary>
     /// Fulltext search food items. Approved items visible to all; pending items only to creator.
     /// </summary>
     [HttpGet("search")]
