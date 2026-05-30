@@ -9,7 +9,7 @@ namespace nutrition_app_backend.Controllers;
 
 [ApiController]
 [Route("api/notifications")]
-[AllowAnonymous]
+[Authorize]
 public class NotificationsController : ControllerBase
 {
     private readonly INotificationService _notificationService;

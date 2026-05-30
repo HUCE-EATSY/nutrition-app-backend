@@ -16,6 +16,8 @@ using nutrition_app_backend.Services.WeightLog;
 using nutrition_app_backend.Services.Exercise;
 using nutrition_app_backend.Services.Notification;
 using nutrition_app_backend.Services.Admin;
+using nutrition_app_backend.Services.StepLog;
+using nutrition_app_backend.Services.HealthConnection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -79,6 +81,8 @@ builder.Services.AddScoped<IAdminExerciseService, AdminExerciseService>();
 builder.Services.AddScoped<IAdminDashboardService, AdminDashboardService>();
 builder.Services.AddHttpClient();
 builder.Services.AddHostedService<NotificationBackgroundService>();
+builder.Services.AddScoped<IStepLogService, StepLogService>();
+builder.Services.AddScoped<IHealthConnectionService, HealthConnectionService>();
 
 // =====================
 // AUTOMAPPER

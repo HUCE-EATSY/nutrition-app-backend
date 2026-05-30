@@ -9,7 +9,7 @@ namespace nutrition_app_backend.Controllers;
 
 [ApiController]
 [Route("api/foods")]
-[AllowAnonymous]
+[Authorize]
 public class FoodsController : ControllerBase
 {
     private readonly IFoodService _foodService;
@@ -31,6 +31,18 @@ public class FoodsController : ControllerBase
     {
         var result = await _foodService.GetAllAsync(page, pageSize, categoryId);
         return Ok(ApiResponse<PaginatedResponse<FoodSearchResponse>>.Success(result, "Lấy danh sách món ăn thành công"));
+    }
+
+    /// <summary>
+    /// Get a paginated list of foods (for default display, no search).
+    /// </summary>
+    [HttpGet("cursor-list")]
+    public async Task<ActionResult<ApiResponse<CursorPaginatedResponse<FoodSearchResponse>>>> GetList([FromQuery] FoodListRequest request)
+    {
+        Guid userId = User.GetUserId();
+        var result = await _foodService.GetListAsync(request, userId);
+
+        return Ok(ApiResponse<CursorPaginatedResponse<FoodSearchResponse>>.Success(result, "Lấy danh sách thành công"));
     }
 
     /// <summary>
@@ -91,5 +103,20 @@ public class FoodsController : ControllerBase
 
         return StatusCode(StatusCodes.Status201Created,
             ApiResponse<FoodDetailResponse>.Success(result, "Tạo món ăn thành công", "201"));
+    }
+
+    /// <summary>
+    /// Create a custom recipe (composite food) from existing ingredients.
+    /// Gửi dưới dạng multipart/form-data.
+    /// </summary>
+    [HttpPost("recipes")]
+    [Consumes("multipart/form-data")]
+    public async Task<ActionResult<ApiResponse<FoodDetailResponse>>> CreateRecipe([FromForm] CreateRecipeRequest request)
+    {
+        Guid userId = User.GetUserId();
+        var result = await _foodService.CreateRecipeAsync(request, userId);
+
+        return StatusCode(StatusCodes.Status201Created,
+            ApiResponse<FoodDetailResponse>.Success(result, "Tạo công thức thành công", "201"));
     }
 }

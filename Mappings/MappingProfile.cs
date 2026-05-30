@@ -33,7 +33,8 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.CaloriesKcal, opt => opt.MapFrom(src => src.ChildFood.Nutrition != null ? src.ChildFood.Nutrition.CaloriesKcal : (decimal?)null))
             .ForMember(dest => dest.ProteinG, opt => opt.MapFrom(src => src.ChildFood.Nutrition != null ? src.ChildFood.Nutrition.ProteinG : (decimal?)null))
             .ForMember(dest => dest.CarbsG, opt => opt.MapFrom(src => src.ChildFood.Nutrition != null ? src.ChildFood.Nutrition.CarbsG : (decimal?)null))
-            .ForMember(dest => dest.FatG, opt => opt.MapFrom(src => src.ChildFood.Nutrition != null ? src.ChildFood.Nutrition.FatG : (decimal?)null));
+            .ForMember(dest => dest.FatG, opt => opt.MapFrom(src => src.ChildFood.Nutrition != null ? src.ChildFood.Nutrition.FatG : (decimal?)null))
+            .ForMember(dest => dest.ChildFoodImageUrl, opt => opt.MapFrom<FoodComponentImageUrlResolver>());
 
         CreateMap<MealType, MealTypeResponse>();
 
@@ -45,5 +46,7 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.MealTypeName, opt => opt.MapFrom(src => src.MealType.NameVi));
 
         CreateMap<WeightLog, WeightLogResponse>();
+        CreateMap<StepLog, StepLogResponse>();
+        CreateMap<UserHealthConnection, UserHealthConnectionResponse>();
     }
 }

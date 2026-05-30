@@ -9,7 +9,7 @@ namespace nutrition_app_backend.Controllers;
 
 [ApiController]
 [Route("api/diary")]
-[AllowAnonymous]
+[Authorize]
 public class DiaryController : ControllerBase
 {
     private readonly IFoodLogService _foodLogService;
@@ -29,17 +29,6 @@ public class DiaryController : ControllerBase
         if (!DateOnly.TryParse(date, out var parsedDate))
         {
             parsedDate = DateOnly.FromDateTime(DateTime.Today);
-        }
-
-        // For anonymous users, return empty data
-        if (!User.Identity?.IsAuthenticated ?? true)
-        {
-            var emptyResult = new DailyFoodLogsResponse
-            {
-                Date = parsedDate,
-                Meals = new List<MealGroupDto>()
-            };
-            return Ok(ApiResponse<DailyFoodLogsResponse>.Success(emptyResult, "Lấy nhật ký thành công"));
         }
 
         Guid userId = User.GetUserId();

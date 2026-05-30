@@ -2,8 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using nutrition_app_backend.Data;
 using nutrition_app_backend.DTOs.Diaries;
 using nutrition_app_backend.Exceptions;
+using nutrition_app_backend.Enums;
 using AutoMapper;
-
 namespace nutrition_app_backend.Services.FoodLog;
 
 public class FoodLogService : IFoodLogService
@@ -35,7 +35,7 @@ public class FoodLogService : IFoodLogService
         if (food == null)
             throw new NotFoundException("Không tìm thấy món ăn.");
 
-        if (food.Status == 2)
+        if (food.Status == FoodStatus.Rejected)
             throw new BusinessException("FOOD_REJECTED", "Món ăn này đã bị từ chối, không thể tạo log.");
 
         // Validate meal type
@@ -220,18 +220,14 @@ public class FoodLogService : IFoodLogService
 
     // --- Private Helpers ---
 
-    /// <summary>
-    /// Calculate snapshot macros using Atwater (4-9-4) formula, scaled by ratio.
-    /// Always uses computed calories, not the stored value.
-    /// </summary>
     private static (decimal calories, decimal protein, decimal carbs, decimal fat)
         CalculateSnapshotMacros(Models.Foods.FoodNutrition nutrition, decimal ratio)
     {
         var protein = Math.Round(nutrition.ProteinG * ratio, 2);
         var carbs = Math.Round(nutrition.CarbsG * ratio, 2);
         var fat = Math.Round(nutrition.FatG * ratio, 2);
-        // Always use Atwater formula — never trust stored calories
-        var calories = Math.Round((protein * 4m) + (carbs * 4m) + (fat * 9m), 2);
+        // Scale the stored calories linearly to match frontend's logic and respect food label calories
+        var calories = Math.Round(nutrition.CaloriesKcal * ratio, 2);
 
         return (calories, protein, carbs, fat);
     }

@@ -23,7 +23,6 @@ public class ExercisesController : ControllerBase
     /// Lấy danh sách danh mục bài tập và các bài tập
     /// </summary>
     [HttpGet("categories")]
-    [AllowAnonymous]
     public async Task<ActionResult<ApiResponse<List<ExerciseCategoryResponse>>>> GetExerciseCategories()
     {
         var result = await _exerciseService.GetExerciseCategoriesAsync();
@@ -34,7 +33,6 @@ public class ExercisesController : ControllerBase
     /// Lấy chi tiết một bài tập
     /// </summary>
     [HttpGet("{id}")]
-    [AllowAnonymous]
     public async Task<ActionResult<ApiResponse<ExerciseResponse>>> GetExercise(Guid id)
     {
         var result = await _exerciseService.GetExerciseByIdAsync(id);
