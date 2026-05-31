@@ -83,11 +83,11 @@ public class ExerciseService : IExerciseService
 
         // Lấy cân nặng hiện tại của user (mặc định 65kg nếu chưa có profile)
         var userProfile = await _context.UserProfiles.FindAsync(userId);
-        var weightKg = userProfile?.WeightKg ?? 65m;
+        decimal weight = userProfile?.WeightKg ?? 65.0m;
 
         // Tính calories đốt cháy: Calories = MET × Weight(kg) × Duration(hours)
         var durationHours = request.DurationMinutes / 60.0m;
-        var caloriesBurned = exercise.MetValue * weightKg * durationHours;
+        var caloriesBurned = exercise.MetValue * weight * durationHours;
 
         // Điều chỉnh theo cường độ
         caloriesBurned = request.Intensity switch
@@ -177,9 +177,9 @@ public class ExerciseService : IExerciseService
 
             // Tính lại calories
             var userProfile = await _context.UserProfiles.FindAsync(userId);
-            var weightKg = userProfile?.WeightKg ?? 65m;
+            decimal weight = userProfile?.WeightKg ?? 65.0m;
             var durationHours = log.DurationMinutes / 60.0m;
-            var caloriesBurned = log.Exercise.MetValue * weightKg * durationHours;
+            var caloriesBurned = log.Exercise.MetValue * weight * durationHours;
 
             caloriesBurned = log.Intensity switch
             {

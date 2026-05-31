@@ -23,6 +23,7 @@ using nutrition_app_backend.Services.Spoonacular;
 using nutrition_app_backend.Services.Admin.Core;
 using nutrition_app_backend.Services.Admin.FoodManagement;
 using nutrition_app_backend.Services.Cron;
+using nutrition_app_backend.Services.Streak;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.ConfigureKestrel(options =>
@@ -84,6 +85,8 @@ builder.Services.AddScoped<IWeightLogService, WeightLogService>();
 builder.Services.AddScoped<IStorageService, CloudinaryStorageService>();
 builder.Services.AddScoped<IExerciseService, ExerciseService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<IMenuService, MenuService>();
+builder.Services.AddScoped<IStreakService, StreakService>();
 
 builder.Services.AddScoped<IStepLogService, StepLogService>();
 builder.Services.AddScoped<IHealthConnectionService, HealthConnectionService>();

@@ -36,4 +36,5 @@ public class FoodItem
     public ICollection<FoodItemComponent> ComponentsAsParent { get; set; } = new List<FoodItemComponent>();
     public ICollection<FoodItemComponent> ComponentsAsChild { get; set; } = new List<FoodItemComponent>();
     public ICollection<FoodLog> FoodLogs { get; set; } = new List<FoodLog>();
+    public ICollection<MenuFood> MenuFoods { get; set; } = new List<MenuFood>();
 }

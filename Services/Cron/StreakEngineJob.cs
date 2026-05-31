@@ -3,7 +3,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using nutrition_app_backend.Data;
-using nutrition_app_backend.Models.Users;
+using nutrition_app_backend.Services.Streak;
 using System;
 using System.Linq;
 using System.Threading;
@@ -15,6 +15,10 @@ namespace nutrition_app_backend.Services.Cron
     {
         private readonly ILogger<StreakEngineJob> _logger;
         private readonly IServiceProvider _serviceProvider;
+
+        // Vietnam timezone (UTC+7)
+        private static readonly TimeZoneInfo VietnamTz = TimeZoneInfo.FindSystemTimeZoneById(
+            OperatingSystem.IsWindows() ? "SE Asia Standard Time" : "Asia/Ho_Chi_Minh");
 
         public StreakEngineJob(ILogger<StreakEngineJob> logger, IServiceProvider serviceProvider)
         {
@@ -28,20 +32,29 @@ namespace nutrition_app_backend.Services.Cron
 
             while (!stoppingToken.IsCancellationRequested)
             {
-                var now = DateTime.UtcNow;
-                // Schedule to run at next midnight UTC
-                var nextRun = now.Date.AddDays(1);
-                var delay = nextRun - now;
+                // Calculate next 23:59 in Vietnam time
+                var nowUtc = DateTime.UtcNow;
+                var nowVn = TimeZoneInfo.ConvertTimeFromUtc(nowUtc, VietnamTz);
 
-                _logger.LogInformation("Next streak processing at {time}", nextRun);
+                // Target: 23:59:00 today (VN time)
+                var targetVn = nowVn.Date.AddHours(23).AddMinutes(59);
 
-                // Wait until next run
+                // If we're already past 23:59 today, schedule for tomorrow
+                if (nowVn >= targetVn)
+                    targetVn = targetVn.AddDays(1);
+
+                // Convert target back to UTC for delay calculation
+                var targetUtc = TimeZoneInfo.ConvertTimeToUtc(targetVn, VietnamTz);
+                var delay = targetUtc - nowUtc;
+
+                _logger.LogInformation("Next streak processing at {vnTime} (VN) / {utcTime} (UTC)", targetVn, targetUtc);
+
                 await Task.Delay(delay, stoppingToken);
 
                 if (stoppingToken.IsCancellationRequested)
                     break;
 
-                _logger.LogInformation("Processing daily streaks at {time}", DateTime.UtcNow);
+                _logger.LogInformation("Processing daily streaks at {vnTime} (VN)", TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, VietnamTz));
 
                 try
                 {
@@ -57,63 +70,9 @@ namespace nutrition_app_backend.Services.Cron
         private async Task ProcessStreaksAsync(CancellationToken stoppingToken)
         {
             using var scope = _serviceProvider.CreateScope();
-            var context = scope.ServiceProvider.GetRequiredService<WaoDbContext>();
-
-            var yesterday = DateTime.UtcNow.Date.AddDays(-1);
-            var yesterdayStart = yesterday;
-            var yesterdayEnd = yesterday.AddDays(1);
-
-            var streaks = await context.UserStreaks.Include(s => s.User).ThenInclude(u => u.Goals).ToListAsync(stoppingToken);
-
-            foreach (var streak in streaks)
-            {
-                if (streak.LastLogDate.HasValue && streak.LastLogDate.Value.Date == DateTime.UtcNow.Date)
-                {
-                    continue; 
-                }
-
-                var activeGoal = streak.User.Goals.OrderByDescending(g => g.Id).FirstOrDefault();
-                decimal bmr = activeGoal?.BmrKcal ?? 1500m;
-                decimal targetKcal = bmr * 0.5m;
-
-                var totalCals = await context.FoodLogs
-                    .Where(f => f.UserId == streak.UserId && f.LogDate >= yesterdayStart && f.LogDate < yesterdayEnd)
-                    .SumAsync(f => f.CaloriesKcal, stoppingToken);
-
-                if (totalCals >= targetKcal)
-                {
-                    streak.CurrentStreak += 1;
-                    if (streak.CurrentStreak > streak.LongestStreak)
-                    {
-                        streak.LongestStreak = streak.CurrentStreak;
-                    }
-                    streak.LastLogDate = DateTime.UtcNow;
-                }
-                else
-                {
-                    var alreadyFrozen = await context.StreakFreezeTransactions
-                        .AnyAsync(f => f.UserId == streak.UserId && f.FreezeDate.Date == yesterday, stoppingToken);
-
-                    if (!alreadyFrozen && streak.FreezeCount > 0)
-                    {
-                        streak.FreezeCount -= 1;
-                        var trans = new StreakFreezeTransaction
-                        {
-                            UserId = streak.UserId,
-                            FreezeDate = yesterday,
-                            Source = 1 // Auto
-                        };
-                        context.StreakFreezeTransactions.Add(trans);
-                    }
-                    else if (!alreadyFrozen)
-                    {
-                        // Reset
-                        streak.CurrentStreak = 0;
-                    }
-                }
-            }
-
-            await context.SaveChangesAsync(stoppingToken);
+            var streakService = scope.ServiceProvider.GetRequiredService<IStreakService>();
+            
+            await streakService.ProcessStreaksAsync(stoppingToken);
         }
     }
 }

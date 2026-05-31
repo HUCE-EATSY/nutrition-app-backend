@@ -22,6 +22,7 @@ public class User
     public ICollection<WeightLog> WeightLogs { get; set; } = new List<WeightLog>();
     public ICollection<FoodLog> FoodLogs { get; set; } = new List<FoodLog>();
     public ICollection<FoodItem> CreatedFoods { get; set; } = new List<FoodItem>();
+    public ICollection<Menu> Menus { get; set; } = new List<Menu>();
     public ICollection<StepLog> StepLogs { get; set; } = new List<StepLog>();
     public ICollection<UserHealthConnection> HealthConnections { get; set; } = new List<UserHealthConnection>();
     
