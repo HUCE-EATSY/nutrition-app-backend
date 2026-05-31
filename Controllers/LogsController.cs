@@ -88,6 +88,20 @@ public class LogsController : ControllerBase
         return Ok(ApiResponse<DailySummaryResponse>.Success(result, "Lấy tổng hợp thành công"));
     }
 
+    /// <summary>
+    /// Get daily nutrition summary for each day in a date range.
+    /// Days with no logs return zeros. Ordered ascending by date.
+    /// </summary>
+    [HttpGet("food/timeline")]
+    public async Task<ActionResult<ApiResponse<List<DailySummaryResponse>>>> GetFoodTimeline(
+        [FromQuery] DateOnly from, [FromQuery] DateOnly to)
+    {
+        Guid userId = User.GetUserId();
+        var result = await _foodLogService.GetTimelineSummaryAsync(userId, from, to);
+
+        return Ok(ApiResponse<List<DailySummaryResponse>>.Success(result, "Lấy lịch sử dinh dưỡng thành công"));
+    }
+
     // ========== WEIGHT LOGS ==========
 
     /// <summary>
