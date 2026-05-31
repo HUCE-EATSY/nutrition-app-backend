@@ -22,6 +22,7 @@ using nutrition_app_backend.Services.OpenFoodFacts;
 using nutrition_app_backend.Services.Spoonacular;
 using nutrition_app_backend.Services.Admin.Core;
 using nutrition_app_backend.Services.Admin.FoodManagement;
+using AdminFoodServiceNew = nutrition_app_backend.Services.Admin.FoodManagement.AdminFoodService;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -89,7 +90,7 @@ builder.Services.AddScoped<IStepLogService, StepLogService>();
 builder.Services.AddScoped<IHealthConnectionService, HealthConnectionService>();
 
 // ===== ADMIN SERVICES =====
-builder.Services.AddScoped<IAdminFoodService, AdminFoodService>();
+builder.Services.AddScoped<nutrition_app_backend.Services.Admin.FoodManagement.IAdminFoodService, AdminFoodServiceNew>();
 builder.Services.AddScoped<IAdminCompositeService, AdminCompositeService>();
 
 // ===== OPEN FOOD FACTS =====

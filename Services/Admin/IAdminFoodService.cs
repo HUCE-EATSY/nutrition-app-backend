@@ -5,7 +5,11 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using System;
 
-public interface IAdminFoodService
+/// <summary>
+/// Legacy admin food service interface (kept for backward compatibility with old AdminFoodService).
+/// The active interface used by AdminFoodsController is in Services.Admin.FoodManagement namespace.
+/// </summary>
+public interface IAdminFoodLegacyService
 {
     Task<IEnumerable<AdminFoodDto>> GetAllFoodsAsync(int page, int pageSize, string? search, byte? categoryId);
     Task<AdminFoodDto> CreateFoodAsync(AdminFoodCreateDto dto, Guid adminId);

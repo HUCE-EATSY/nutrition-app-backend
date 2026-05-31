@@ -3,6 +3,7 @@ namespace nutrition_app_backend.Services.Admin;
 using Microsoft.EntityFrameworkCore;
 using nutrition_app_backend.Data;
 using nutrition_app_backend.DTOs.Admin;
+using nutrition_app_backend.Enums;
 using nutrition_app_backend.Exceptions;
 using nutrition_app_backend.Models.Foods;
 using System;
@@ -10,7 +11,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-public class AdminFoodService : IAdminFoodService
+public class AdminFoodService : IAdminFoodLegacyService
 {
     private readonly WaoDbContext _dbContext;
 
@@ -44,7 +45,7 @@ public class AdminFoodService : IAdminFoodService
                 NameVi = f.NameVi,
                 NameEn = f.NameEn,
                 CategoryId = f.CategoryId,
-                Status = f.Status,
+                Status = (byte)f.Status,
                 ServingSizeG = f.ServingSizeG,
                 ServingUnitVi = f.ServingUnitVi,
                 ThumbnailUrl = f.ThumbnailUrl,
@@ -70,8 +71,8 @@ public class AdminFoodService : IAdminFoodService
             NameVi = dto.NameVi,
             NameEn = dto.NameEn,
             CategoryId = dto.CategoryId,
-            Source = 1, // Admin source
-            Status = 1, // Active
+            Source = FoodSource.Official, // Admin source
+            Status = FoodStatus.Approved, // Active
             ServingSizeG = dto.ServingSizeG,
             ServingUnitVi = dto.ServingUnitVi ?? "g",
             ThumbnailUrl = dto.ThumbnailUrl,
@@ -97,7 +98,7 @@ public class AdminFoodService : IAdminFoodService
             NameVi = food.NameVi,
             NameEn = food.NameEn,
             CategoryId = food.CategoryId,
-            Status = food.Status,
+            Status = (byte)food.Status,
             ServingSizeG = food.ServingSizeG,
             ServingUnitVi = food.ServingUnitVi,
             ThumbnailUrl = food.ThumbnailUrl,
@@ -147,7 +148,7 @@ public class AdminFoodService : IAdminFoodService
             NameVi = food.NameVi,
             NameEn = food.NameEn,
             CategoryId = food.CategoryId,
-            Status = food.Status,
+            Status = (byte)food.Status,
             ServingSizeG = food.ServingSizeG,
             ServingUnitVi = food.ServingUnitVi,
             ThumbnailUrl = food.ThumbnailUrl,
@@ -177,7 +178,7 @@ public class AdminFoodService : IAdminFoodService
         var food = await _dbContext.FoodItems.FindAsync(id);
         if (food == null) throw new NotFoundException("Food not found.");
 
-        food.Status = (byte)(food.Status == 1 ? 0 : 1);
+        food.Status = food.Status == FoodStatus.Approved ? FoodStatus.Pending : FoodStatus.Approved;
         food.UpdatedAt = DateTime.UtcNow;
         
         await _dbContext.SaveChangesAsync();
@@ -187,7 +188,7 @@ public class AdminFoodService : IAdminFoodService
     public async Task<AdminFoodStatsDto> GetStatsAsync()
     {
         var total = await _dbContext.FoodItems.CountAsync();
-        var visible = await _dbContext.FoodItems.CountAsync(f => f.Status == 1);
+        var visible = await _dbContext.FoodItems.CountAsync(f => f.Status == FoodStatus.Approved);
         var categories = await _dbContext.FoodItems.Select(f => f.CategoryId).Distinct().CountAsync();
 
         return new AdminFoodStatsDto

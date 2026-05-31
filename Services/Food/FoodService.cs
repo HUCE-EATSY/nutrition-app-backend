@@ -297,7 +297,7 @@ public class FoodService : IFoodService
         var query = _db.FoodItems
             .Include(f => f.Nutrition)
             .Include(f => f.ActiveImage)
-            .Where(f => f.Status == 1);
+            .Where(f => f.Status == FoodStatus.Approved);
 
         if (categoryId.HasValue)
             query = query.Where(f => f.CategoryId == categoryId.Value);
@@ -312,7 +312,7 @@ public class FoodService : IFoodService
 
         var items = foods.Select(f =>
         {
-            string? resolvedImageUrl = f.Source == 3
+            string? resolvedImageUrl = f.Source == FoodSource.Community
                 ? f.ThumbnailUrl
                 : (f.ActiveImage?.StoragePath != null ? _storage.BuildUrl(f.ActiveImage.StoragePath) : null);
 
@@ -322,7 +322,7 @@ public class FoodService : IFoodService
                 NameVi = f.NameVi,
                 NameEn = f.NameEn,
                 CategoryId = f.CategoryId,
-                Source = f.Source,
+                Source = (byte)f.Source,
                 ServingSizeG = f.ServingSizeG,
                 ServingUnitVi = f.ServingUnitVi ?? "g",
                 CaloriesKcal = f.Nutrition?.CaloriesKcal,
