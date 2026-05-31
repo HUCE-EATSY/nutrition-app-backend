@@ -64,6 +64,11 @@ builder.Services.AddDbContext<WaoDbContext>(options =>
 );
 
 // =====================
+// HTTP CLIENT (for Google UserInfo API on web login)
+// =====================
+builder.Services.AddHttpClient();
+
+// =====================
 // SERVICES / INTERFACES
 // =====================
 builder.Services.AddScoped<IAuthService, AuthService>();
