@@ -22,8 +22,13 @@ using nutrition_app_backend.Services.OpenFoodFacts;
 using nutrition_app_backend.Services.Spoonacular;
 using nutrition_app_backend.Services.Admin.Core;
 using nutrition_app_backend.Services.Admin.FoodManagement;
+using nutrition_app_backend.Services.Cron;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.ListenAnyIP(5184);
+});
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -82,6 +87,7 @@ builder.Services.AddScoped<INotificationService, NotificationService>();
 
 builder.Services.AddScoped<IStepLogService, StepLogService>();
 builder.Services.AddScoped<IHealthConnectionService, HealthConnectionService>();
+builder.Services.AddHostedService<StreakEngineJob>();
 
 // ===== ADMIN SERVICES =====
 builder.Services.AddScoped<IAdminFoodService, AdminFoodService>();
@@ -230,7 +236,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseExceptionHandler();
-app.UseHttpsRedirection();
+    app.UseHttpsRedirection();
 app.UseCors("AllowAll");
 app.UseAuthentication();
 app.UseAuthorization();

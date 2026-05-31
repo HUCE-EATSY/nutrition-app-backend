@@ -8,6 +8,7 @@ public class UserGoal
     public byte ActivityLevel { get; set; } = 1;
     public byte GoalType { get; set; } = 3;
     public decimal? GoalWeightKg { get; set; }
+    public decimal WeeklyGoalKg { get; set; } = 0.5m;
     public decimal BmrKcal { get; set; }
     public decimal TdeeKcal { get; set; }
     public decimal TargetCalories { get; set; }
@@ -15,6 +16,7 @@ public class UserGoal
     public decimal TargetCarbsG { get; set; }
     public decimal TargetFatG { get; set; }
     public bool IsActive { get; set; } = true;
+    public DateTime TargetDate { get; set; }
     public DateTime CreatedAt { get; set; }
 
     public User User { get; set; } = null!;

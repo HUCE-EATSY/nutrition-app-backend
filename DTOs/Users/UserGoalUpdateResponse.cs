@@ -7,11 +7,13 @@ public record UserGoalUpdateResponse(
     byte ActivityLevel,
     byte GoalType,
     decimal? GoalWeightKg,
+    decimal WeeklyGoalKg,
     decimal BmrKcal,
     decimal TdeeKcal,
     decimal TargetCalories,
     decimal TargetProteinG,
     decimal TargetCarbsG,
     decimal TargetFatG,
-    bool IsActive
+    bool IsActive,
+    DateTime TargetDate
 );

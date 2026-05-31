@@ -9,4 +9,5 @@ public interface IFoodLogService
     Task DeleteAsync(Guid userId, ulong logId);
     Task<DailyFoodLogsResponse> GetDailyLogsAsync(Guid userId, DateOnly date);
     Task<DailySummaryResponse> GetDailySummaryAsync(Guid userId, DateOnly date);
+    Task<List<DailySummaryResponse>> GetTimelineSummaryAsync(Guid userId, DateOnly from, DateOnly to);
 }

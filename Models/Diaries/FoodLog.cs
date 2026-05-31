@@ -9,7 +9,7 @@ public class FoodLog
     public Guid UserId { get; set; }
     public Guid FoodItemId { get; set; }
     public byte MealTypeId { get; set; }
-    public DateOnly LogDate { get; set; }
+    public DateTime LogDate { get; set; }
     public decimal QuantityG { get; set; }
     public decimal CaloriesKcal { get; set; }
     public decimal ProteinG { get; set; } = 0;

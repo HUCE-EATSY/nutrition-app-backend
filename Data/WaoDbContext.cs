@@ -20,6 +20,13 @@ public class WaoDbContext : DbContext
     public DbSet<RefreshToken> RefreshTokens { get; set; } = null!;
     public DbSet<WeightLog> WeightLogs { get; set; } = null!;
 
+    // Phase 3 Group
+    public DbSet<UserStreak> UserStreaks { get; set; } = null!;
+    public DbSet<StreakFreezeTransaction> StreakFreezeTransactions { get; set; } = null!;
+    public DbSet<SubscriptionPlan> SubscriptionPlans { get; set; } = null!;
+    public DbSet<Subscription> Subscriptions { get; set; } = null!;
+    public DbSet<SubscriptionEvent> SubscriptionEvents { get; set; } = null!;
+
     // Food Group
     public DbSet<FoodCategory> FoodCategories { get; set; } = null!;
     public DbSet<FoodItem> FoodItems { get; set; } = null!;
@@ -96,6 +103,7 @@ public class WaoDbContext : DbContext
             entity.Property(e => e.UserId).HasColumnType("CHAR(36)");
             entity.Property(e => e.WeightKg).HasPrecision(5, 2);
             entity.Property(e => e.GoalWeightKg).HasPrecision(5, 2);
+            entity.Property(e => e.WeeklyGoalKg).HasPrecision(3, 2);
             entity.Property(e => e.BmrKcal).HasPrecision(7, 2);
             entity.Property(e => e.TdeeKcal).HasPrecision(7, 2);
             entity.Property(e => e.TargetCalories).HasPrecision(7, 2);
@@ -115,6 +123,7 @@ public class WaoDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.UserId).HasColumnType("CHAR(36)");
             entity.Property(e => e.WeightKg).HasPrecision(5, 2);
+            entity.Property(e => e.PhotoUrl).HasMaxLength(2048).IsRequired(false);
             // Chỉ cần 1 Index Unique là đủ cho cả query và tính duy nhất
             entity.HasIndex(e => new { e.UserId, e.LogDate }).IsUnique().HasDatabaseName("idx_weight_user_date");
 
@@ -163,6 +172,73 @@ public class WaoDbContext : DbContext
                   .WithMany(p => p.RefreshTokens)
                   .HasForeignKey(d => d.UserId)
                   .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // --- PHASE 3: STREAK & SUBSCRIPTION ---
+        modelBuilder.Entity<UserStreak>(entity =>
+        {
+            entity.ToTable("user_streaks");
+            entity.HasKey(e => e.UserId);
+            entity.Property(e => e.UserId).HasColumnType("CHAR(36)");
+
+            entity.HasOne(d => d.User)
+                  .WithOne(p => p.Streak)
+                  .HasForeignKey<UserStreak>(d => d.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<StreakFreezeTransaction>(entity =>
+        {
+            entity.ToTable("streak_freeze_transactions");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnType("CHAR(36)");
+            entity.Property(e => e.UserId).HasColumnType("CHAR(36)");
+
+            entity.HasIndex(e => new { e.UserId, e.FreezeDate }).IsUnique().HasDatabaseName("idx_freeze_user_date");
+
+            entity.HasOne(d => d.User)
+                  .WithMany(p => p.StreakFreezeTransactions)
+                  .HasForeignKey(d => d.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<SubscriptionPlan>(entity =>
+        {
+            entity.ToTable("subscription_plans");
+            entity.HasKey(e => e.Id);
+        });
+
+        modelBuilder.Entity<Subscription>(entity =>
+        {
+            entity.ToTable("subscriptions");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnType("CHAR(36)");
+            entity.Property(e => e.UserId).HasColumnType("CHAR(36)");
+            
+            entity.HasIndex(e => new { e.UserId, e.Status }).HasDatabaseName("idx_subscription_user_status");
+
+            entity.HasOne(d => d.User)
+                  .WithMany(p => p.Subscriptions)
+                  .HasForeignKey(d => d.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(d => d.Plan)
+                  .WithMany()
+                  .HasForeignKey(d => d.PlanId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<SubscriptionEvent>(entity =>
+        {
+            entity.ToTable("subscription_events");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnType("CHAR(36)");
+            entity.Property(e => e.SubscriptionId).HasColumnType("CHAR(36)");
+
+            entity.HasOne(d => d.Subscription)
+                  .WithMany()
+                  .HasForeignKey(d => d.SubscriptionId)
+                  .OnDelete(DeleteBehavior.SetNull);
         });
 
         // --- GROUP 2: FOOD DATABASE ---
@@ -464,6 +540,12 @@ public class WaoDbContext : DbContext
             new NotificationType { Id = 5, Code = "GOAL_ACHIEVED", NameVi = "Đạt mục tiêu", NameEn = "Goal Achieved", Description = "Thông báo khi đạt mục tiêu" },
             new NotificationType { Id = 6, Code = "DAILY_SUMMARY", NameVi = "Tổng kết ngày", NameEn = "Daily Summary", Description = "Tổng kết dinh dưỡng và tập luyện trong ngày" },
             new NotificationType { Id = 7, Code = "WEEKLY_REPORT", NameVi = "Báo cáo tuần", NameEn = "Weekly Report", Description = "Báo cáo tiến độ hàng tuần" }
+        );
+
+        modelBuilder.Entity<SubscriptionPlan>().HasData(
+            new SubscriptionPlan { Id = 1, Code = "FREE", Name = "Gói Miễn Phí", Price = 0, DurationDays = 99999, CreatedAt = new DateTime(2024,1,1,0,0,0,DateTimeKind.Utc), UpdatedAt = new DateTime(2024,1,1,0,0,0,DateTimeKind.Utc) },
+            new SubscriptionPlan { Id = 2, Code = "MONTHLY_PREMIUM", Name = "Premium 1 Tháng", Price = 59000, DurationDays = 30, CreatedAt = new DateTime(2024,1,1,0,0,0,DateTimeKind.Utc), UpdatedAt = new DateTime(2024,1,1,0,0,0,DateTimeKind.Utc) },
+            new SubscriptionPlan { Id = 3, Code = "YEARLY_PREMIUM", Name = "Premium 1 Năm", Price = 499000, DurationDays = 365, CreatedAt = new DateTime(2024,1,1,0,0,0,DateTimeKind.Utc), UpdatedAt = new DateTime(2024,1,1,0,0,0,DateTimeKind.Utc) }
         );
     }
 

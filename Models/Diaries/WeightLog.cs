@@ -9,6 +9,7 @@ public class WeightLog
     public decimal WeightKg { get; set; }
     public DateOnly LogDate { get; set; }
     public string? Note { get; set; }
+    public string? PhotoUrl { get; set; }
     public DateTime CreatedAt { get; set; }
 
     public User User { get; set; } = null!;
