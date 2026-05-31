@@ -63,6 +63,10 @@ public class WaoDbContext : DbContext
             entity.ToTable("user_auth_providers");
             entity.HasKey(e => e.Id);
             entity.Property(e => e.UserId).HasColumnType("CHAR(36)");
+            entity.Property(e => e.HashedPassword)
+                  .HasColumnName("hashed_password")
+                  .HasMaxLength(255)
+                  .IsRequired(false);
             entity.HasIndex(e => new { e.Provider, e.ProviderUid }).IsUnique();
 
             entity.HasOne(d => d.User)
@@ -181,6 +185,7 @@ public class WaoDbContext : DbContext
             entity.HasIndex(e => new { e.NameVi, e.NameEn }).IsFullText().HasDatabaseName("idx_food_ft");
             entity.HasIndex(e => e.ActiveImageId).HasDatabaseName("idx_food_active_image");
             entity.HasIndex(e => e.Status).HasDatabaseName("idx_food_status");
+            entity.HasIndex(e => new { e.CreatedAt, e.Id }).HasDatabaseName("idx_food_cursor_pagination");
             
             entity.HasOne(d => d.Parent)
                   .WithMany(p => p.Children)

@@ -15,9 +15,13 @@ using nutrition_app_backend.Services.User;
 using nutrition_app_backend.Services.WeightLog;
 using nutrition_app_backend.Services.Exercise;
 using nutrition_app_backend.Services.Notification;
-using nutrition_app_backend.Services.Admin;
+
 using nutrition_app_backend.Services.StepLog;
 using nutrition_app_backend.Services.HealthConnection;
+using nutrition_app_backend.Services.OpenFoodFacts;
+using nutrition_app_backend.Services.Spoonacular;
+using nutrition_app_backend.Services.Admin.Core;
+using nutrition_app_backend.Services.Admin.FoodManagement;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -80,14 +84,31 @@ builder.Services.AddScoped<IWeightLogService, WeightLogService>();
 builder.Services.AddScoped<IStorageService, CloudinaryStorageService>();
 builder.Services.AddScoped<IExerciseService, ExerciseService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
-builder.Services.AddScoped<IAdminUserService, AdminUserService>();
-builder.Services.AddScoped<IAdminFoodService, AdminFoodService>();
-builder.Services.AddScoped<IAdminExerciseService, AdminExerciseService>();
-builder.Services.AddScoped<IAdminDashboardService, AdminDashboardService>();
-builder.Services.AddHttpClient();
 builder.Services.AddHostedService<NotificationBackgroundService>();
 builder.Services.AddScoped<IStepLogService, StepLogService>();
 builder.Services.AddScoped<IHealthConnectionService, HealthConnectionService>();
+
+// ===== ADMIN SERVICES =====
+builder.Services.AddScoped<IAdminFoodService, AdminFoodService>();
+builder.Services.AddScoped<IAdminCompositeService, AdminCompositeService>();
+
+// ===== OPEN FOOD FACTS =====
+builder.Services.AddHttpClient("OpenFoodFacts", client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["OpenFoodFacts:BaseUrl"]!);
+    client.Timeout     = TimeSpan.FromSeconds(5);
+    client.DefaultRequestHeaders.UserAgent.ParseAdd(
+        builder.Configuration["OpenFoodFacts:UserAgent"]!);
+});
+builder.Services.AddScoped<IOpenFoodFactsService, OpenFoodFactsService>();
+
+// ===== SPOONACULAR =====
+builder.Services.AddHttpClient("Spoonacular", client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["Spoonacular:BaseUrl"]!);
+    client.Timeout     = TimeSpan.FromSeconds(30);
+});
+builder.Services.AddScoped<ISpoonacularService, SpoonacularService>();
 
 // =====================
 // AUTOMAPPER
@@ -234,5 +255,4 @@ app.MapGet("/api/health/db", async (WaoDbContext dbContext) =>
             statusCode: StatusCodes.Status500InternalServerError,
             instance: "/api/health/db");
 });
-
 app.Run();
