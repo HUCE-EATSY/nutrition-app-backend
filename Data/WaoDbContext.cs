@@ -33,8 +33,6 @@ public class WaoDbContext : DbContext
     public DbSet<FoodItemImage> FoodItemImages { get; set; } = null!;
     public DbSet<FoodNutrition> FoodNutritions { get; set; } = null!;
     public DbSet<FoodItemComponent> FoodItemComponents { get; set; } = null!;
-    public DbSet<Menu> Menus { get; set; } = null!;
-    public DbSet<MenuFood> MenuFoods { get; set; } = null!;
 
     // Logging Group
     public DbSet<MealType> MealTypes { get; set; } = null!;
@@ -245,44 +243,6 @@ public class WaoDbContext : DbContext
         });
 
         // --- GROUP 2: FOOD DATABASE ---
-        modelBuilder.Entity<Menu>(entity =>
-        {
-            entity.ToTable("menus");
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.Id).HasColumnType("CHAR(36)");
-            entity.Property(e => e.UserId).HasColumnType("CHAR(36)");
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
-            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)");
-            
-            entity.HasIndex(e => e.UserId).HasDatabaseName("idx_menu_user");
-
-            entity.HasOne(d => d.User)
-                  .WithMany(p => p.Menus)
-                  .HasForeignKey(d => d.UserId)
-                  .OnDelete(DeleteBehavior.Cascade);
-        });
-
-        modelBuilder.Entity<MenuFood>(entity =>
-        {
-            entity.ToTable("menu_foods");
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.Id).HasColumnType("CHAR(36)");
-            entity.Property(e => e.MenuId).HasColumnType("CHAR(36)");
-            entity.Property(e => e.FoodItemId).HasColumnType("CHAR(36)");
-
-            entity.HasIndex(e => new { e.MenuId, e.FoodItemId }).IsUnique();
-
-            entity.HasOne(d => d.Menu)
-                  .WithMany(p => p.MenuFoods)
-                  .HasForeignKey(d => d.MenuId)
-                  .OnDelete(DeleteBehavior.Cascade);
-
-            entity.HasOne(d => d.FoodItem)
-                  .WithMany(p => p.MenuFoods)
-                  .HasForeignKey(d => d.FoodItemId)
-                  .OnDelete(DeleteBehavior.Restrict);
-        });
-
         modelBuilder.Entity<FoodCategory>(entity =>
         {
             entity.ToTable("food_categories");
@@ -427,7 +387,6 @@ public class WaoDbContext : DbContext
             entity.ToTable("exercises");
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id).HasColumnType("CHAR(36)");
-            entity.Property(e => e.CreatedBy).HasColumnType("CHAR(36)");
             entity.Property(e => e.MetValue).HasPrecision(5, 2);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)");
@@ -439,11 +398,6 @@ public class WaoDbContext : DbContext
                   .WithMany(p => p.Exercises)
                   .HasForeignKey(d => d.CategoryId)
                   .OnDelete(DeleteBehavior.Restrict);
-
-            entity.HasOne(d => d.Creator)
-                  .WithMany()
-                  .HasForeignKey(d => d.CreatedBy)
-                  .OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<ExerciseLog>(entity =>

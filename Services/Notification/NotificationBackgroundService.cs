@@ -50,11 +50,11 @@ public class NotificationBackgroundService : BackgroundService
         
         var today = DateTime.UtcNow.Date;
 
-        var usersWithTokens = await context.UserDeviceTokens
+        var usersWithTokens = await context.UserPushTokens
             .GroupBy(t => t.UserId)
             .Select(g => new {
                 UserId = g.Key,
-                Tokens = g.Select(t => t.DeviceToken).ToList()
+                Tokens = g.Select(t => t.Token).ToList()
             })
             .ToListAsync(stoppingToken);
             
@@ -103,7 +103,7 @@ public class NotificationBackgroundService : BackgroundService
                 if (goal != null && goal.TargetCalories > 0)
                 {
                     var caloriesEaten = await context.FoodLogs
-                        .Where(f => f.UserId == userId && f.LogDate >= todayDateOnly)
+                        .Where(f => f.UserId == userId && f.LogDate >= today)
                         .SumAsync(f => f.CaloriesKcal, stoppingToken);
                         
                     if (caloriesEaten < goal.TargetCalories - 200) // still need more than 200 kcal
