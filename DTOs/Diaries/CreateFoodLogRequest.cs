@@ -16,7 +16,7 @@ public class CreateFoodLogRequest
 
     [Required]
     [JsonPropertyName("log_date")]
-    public DateOnly LogDate { get; set; }
+    public DateTime LogDate { get; set; }
 
     [Required]
     [Range(0.01, 99999.99)]

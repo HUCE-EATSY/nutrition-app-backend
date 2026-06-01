@@ -29,6 +29,10 @@ using nutrition_app_backend.Services.Cron;
 using nutrition_app_backend.Services.Streak;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.ListenAnyIP(5184);
+});
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -242,7 +246,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseExceptionHandler();
-app.UseHttpsRedirection();
+    app.UseHttpsRedirection();
 app.UseCors("AllowAll");
 app.UseAuthentication();
 app.UseAuthorization();

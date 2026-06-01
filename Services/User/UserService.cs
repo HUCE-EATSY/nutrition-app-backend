@@ -89,12 +89,23 @@ public class UserService : IUserService
         };
         if (targetCalories < 1200) targetCalories = 1200; // Safe minimum boundary
 
+        // Calculate target completion date dynamically using request.WeeklyGoalKg
+        decimal weightDiff = Math.Abs(request.WeightKg - request.GoalWeightKg);
+        int weeksNeeded = 0;
+        if (request.GoalType != 3) // 1 = Lose, 2 = Gain, 3 = Maintain
+        {
+            decimal weeklyGoal = request.WeeklyGoalKg > 0 ? request.WeeklyGoalKg : 0.5m;
+            weeksNeeded = (int)Math.Ceiling(weightDiff / weeklyGoal);
+        }
+        DateTime targetDate = DateTime.UtcNow.AddDays(weeksNeeded * 7);
+
         // 3. KHỞI TẠO GOAL
         var goal = new UserGoal
         {
             UserId = userId,
             WeightKg = request.WeightKg,
             GoalWeightKg = request.GoalWeightKg,
+            WeeklyGoalKg = request.WeeklyGoalKg,
             ActivityLevel = request.ActivityLevel,
             GoalType = request.GoalType,
             BmrKcal = bmr,
@@ -103,6 +114,7 @@ public class UserService : IUserService
             TargetProteinG = targetCalories * 0.3m / 4,
             TargetCarbsG = targetCalories * 0.4m / 4,
             TargetFatG = targetCalories * 0.3m / 9,
+            TargetDate = targetDate,
             IsActive = true
         };
         _dbContext.UserGoals.Add(goal);
@@ -170,6 +182,16 @@ public class UserService : IUserService
             goal.TargetProteinG = targetCalories * 0.3m / 4;
             goal.TargetCarbsG = targetCalories * 0.4m / 4;
             goal.TargetFatG = targetCalories * 0.3m / 9;
+
+            // Recalculate TargetDate
+            decimal weightDiff = Math.Abs(request.WeightKg - (goal.GoalWeightKg ?? request.WeightKg));
+            int weeksNeeded = 0;
+            if (goal.GoalType != 3)
+            {
+                decimal weeklyGoal = goal.WeeklyGoalKg > 0 ? goal.WeeklyGoalKg : 0.5m;
+                weeksNeeded = (int)Math.Ceiling(weightDiff / weeklyGoal);
+            }
+            goal.TargetDate = DateTime.UtcNow.AddDays(weeksNeeded * 7);
         }
 
         await _dbContext.SaveChangesAsync();
@@ -186,10 +208,21 @@ public class UserService : IUserService
         // Cập nhật goal
         goal.GoalType = request.GoalType;
         goal.GoalWeightKg = request.GoalWeightKg;
+        goal.WeeklyGoalKg = request.WeeklyGoalKg;
         goal.TargetCalories = request.TargetCalories;
         goal.TargetProteinG = request.TargetProteinG;
         goal.TargetCarbsG = request.TargetCarbsG;
         goal.TargetFatG = request.TargetFatG;
+
+        // Recalculate TargetDate
+        decimal weightDiff = Math.Abs(goal.WeightKg - (request.GoalWeightKg ?? goal.WeightKg));
+        int weeksNeeded = 0;
+        if (request.GoalType != 3)
+        {
+            decimal weeklyGoal = request.WeeklyGoalKg > 0 ? request.WeeklyGoalKg : 0.5m;
+            weeksNeeded = (int)Math.Ceiling(weightDiff / weeklyGoal);
+        }
+        goal.TargetDate = DateTime.UtcNow.AddDays(weeksNeeded * 7);
 
         await _dbContext.SaveChangesAsync();
 
@@ -249,9 +282,7 @@ public class UserService : IUserService
     }
 
     /// <summary>
-    /// Xóa tài khoản user (soft delete).
-    /// - Đánh dấu DeletedAt trên bản ghi User.
-    /// - Thu hồi toàn bộ RefreshToken còn hiệu lực để ngăn đăng nhập lại.
+    /// Xóa tài khoản user (hard delete).
     /// </summary>
     public async Task DeleteAccountAsync(Guid userId)
     {
@@ -259,21 +290,7 @@ public class UserService : IUserService
         if (user == null)
             throw new NotFoundException("User not found.");
 
-        if (user.DeletedAt.HasValue)
-            throw new BusinessException("ACCOUNT_ALREADY_DELETED", "Tài khoản đã bị xóa trước đó.");
-
-        var now = DateTime.UtcNow;
-
-        // Soft delete user
-        user.DeletedAt = now;
-        user.UpdatedAt = now;
-
-        // Thu hồi tất cả refresh token còn hiệu lực
-        var activeTokens = _dbContext.RefreshTokens
-            .Where(t => t.UserId == userId && t.RevokedAt == null);
-        
-        foreach (var token in activeTokens)
-            token.RevokedAt = now;
+        _dbContext.Users.Remove(user);
 
         await _dbContext.SaveChangesAsync();
     }

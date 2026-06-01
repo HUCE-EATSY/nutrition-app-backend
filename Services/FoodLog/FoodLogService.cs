@@ -133,12 +133,14 @@ public class FoodLogService : IFoodLogService
     /// </summary>
     public async Task<DailyFoodLogsResponse> GetDailyLogsAsync(Guid userId, DateOnly date)
     {
+        var start = date.ToDateTime(TimeOnly.MinValue);
+        var end = start.AddDays(1);
         var logs = await _db.FoodLogs
-            .Where(l => l.UserId == userId && l.LogDate == date)
+            .Where(l => l.UserId == userId && l.LogDate >= start && l.LogDate < end)
             .Include(l => l.FoodItem).ThenInclude(f => f.ActiveImage)
             .Include(l => l.MealType)
             .OrderBy(l => l.MealTypeId)
-            .ThenBy(l => l.CreatedAt)
+            .ThenBy(l => l.LogDate)
             .ToListAsync();
 
         var mealTypes = await _db.MealTypes.ToListAsync();
@@ -170,8 +172,10 @@ public class FoodLogService : IFoodLogService
     /// </summary>
     public async Task<DailySummaryResponse> GetDailySummaryAsync(Guid userId, DateOnly date)
     {
+        var start = date.ToDateTime(TimeOnly.MinValue);
+        var end = start.AddDays(1);
         var logs = await _db.FoodLogs
-            .Where(l => l.UserId == userId && l.LogDate == date)
+            .Where(l => l.UserId == userId && l.LogDate >= start && l.LogDate < end)
             .ToListAsync();
 
         var totalCalories = logs.Sum(l => l.CaloriesKcal);
@@ -230,5 +234,63 @@ public class FoodLogService : IFoodLogService
         var calories = Math.Round(nutrition.CaloriesKcal * ratio, 2);
 
         return (calories, protein, carbs, fat);
+    }
+
+    /// <summary>
+    /// Get daily nutrition summary for each day in a date range.
+    /// Days with no logs return zeros. Target is shared from the user's active goal.
+    /// Ordered ascending by date.
+    /// </summary>
+    public async Task<List<DailySummaryResponse>> GetTimelineSummaryAsync(Guid userId, DateOnly from, DateOnly to)
+    {
+        // 1. Fetch all logs in range — single DB query
+        var startDt = from.ToDateTime(TimeOnly.MinValue);
+        var endDt   = to.ToDateTime(TimeOnly.MaxValue);
+        var logs = await _db.FoodLogs
+            .Where(l => l.UserId == userId && l.LogDate >= startDt && l.LogDate <= endDt)
+            .ToListAsync();
+
+        // 2. Fetch active goal — single DB query, shared across all days
+        var activeGoal = await _db.UserGoals
+            .FirstOrDefaultAsync(g => g.UserId == userId && g.IsActive);
+
+        // 3. Fill every day in [from, to], including days with no logs (zero values)
+        var result = new List<DailySummaryResponse>();
+        for (var d = from; d <= to; d = d.AddDays(1))
+        {
+            var dayLogs = logs.Where(l => DateOnly.FromDateTime(l.LogDate) == d).ToList();
+            var cal  = dayLogs.Sum(l => l.CaloriesKcal);
+            var prot = dayLogs.Sum(l => l.ProteinG);
+            var carb = dayLogs.Sum(l => l.CarbsG);
+            var fat  = dayLogs.Sum(l => l.FatG);
+
+            DailyTargetDto? target = null;
+            if (activeGoal != null)
+            {
+                target = new DailyTargetDto
+                {
+                    TargetCalories = activeGoal.TargetCalories,
+                    TargetProteinG = activeGoal.TargetProteinG,
+                    TargetCarbsG   = activeGoal.TargetCarbsG,
+                    TargetFatG     = activeGoal.TargetFatG,
+                    CaloriesPct = activeGoal.TargetCalories > 0 ? Math.Round(cal  / activeGoal.TargetCalories * 100, 1) : 0,
+                    ProteinPct  = activeGoal.TargetProteinG > 0 ? Math.Round(prot / activeGoal.TargetProteinG  * 100, 1) : 0,
+                    CarbsPct    = activeGoal.TargetCarbsG   > 0 ? Math.Round(carb / activeGoal.TargetCarbsG    * 100, 1) : 0,
+                    FatPct      = activeGoal.TargetFatG     > 0 ? Math.Round(fat  / activeGoal.TargetFatG      * 100, 1) : 0,
+                };
+            }
+
+            result.Add(new DailySummaryResponse
+            {
+                Date          = d,
+                TotalCalories = cal,
+                TotalProteinG = prot,
+                TotalCarbsG   = carb,
+                TotalFatG     = fat,
+                Target        = target,
+            });
+        }
+
+        return result;
     }
 }

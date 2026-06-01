@@ -18,4 +18,7 @@ public class WeightLogResponse
 
     [JsonPropertyName("created_at")]
     public DateTime CreatedAt { get; set; }
+
+    [JsonPropertyName("photo_url")]
+    public string? PhotoUrl { get; set; }
 }

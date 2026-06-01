@@ -21,6 +21,9 @@ public record OnboardingRequest(
     [Range(1, 5)]
     byte ActivityLevel,
 
+    [Range(0.0, 2.0)]
+    decimal WeeklyGoalKg,
+
     [Range(1, 3)]
     byte GoalType
 );

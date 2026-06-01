@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Http;
 
 namespace nutrition_app_backend.DTOs.Diaries;
 
@@ -13,4 +14,7 @@ public class UpdateWeightLogRequest
     [MaxLength(500)]
     [JsonPropertyName("note")]
     public string? Note { get; set; }
+
+    [JsonPropertyName("photo")]
+    public IFormFile? Photo { get; set; }
 }

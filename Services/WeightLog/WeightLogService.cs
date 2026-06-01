@@ -2,6 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using nutrition_app_backend.Data;
 using nutrition_app_backend.DTOs.Diaries;
 using nutrition_app_backend.Exceptions;
+using nutrition_app_backend.Services.Storage;
+using Microsoft.AspNetCore.Http;
 using AutoMapper;
 
 namespace nutrition_app_backend.Services.WeightLog;
@@ -10,11 +12,13 @@ public class WeightLogService : IWeightLogService
 {
     private readonly WaoDbContext _db;
     private readonly IMapper _mapper;
+    private readonly IStorageService _storage;
 
-    public WeightLogService(WaoDbContext db, IMapper mapper)
+    public WeightLogService(WaoDbContext db, IMapper mapper, IStorageService storage)
     {
         _db = db;
         _mapper = mapper;
+        _storage = storage;
     }
 
     /// <summary>
@@ -32,12 +36,20 @@ public class WeightLogService : IWeightLogService
             throw new ConflictException(
                 "Bạn đã ghi cân nặng cho ngày này rồi. Vui lòng dùng PUT để cập nhật.");
 
+        string? photoUrl = null;
+        if (request.Photo != null && request.Photo.Length > 0)
+        {
+            var publicId = await _storage.UploadAsync(request.Photo, "body_photos");
+            photoUrl = _storage.BuildUrl(publicId);
+        }
+
         var log = new Models.Diaries.WeightLog
         {
             UserId = userId,
             WeightKg = request.WeightKg,
             LogDate = request.LogDate,
             Note = request.Note,
+            PhotoUrl = photoUrl,
             CreatedAt = DateTime.UtcNow,
         };
 
@@ -75,7 +87,7 @@ public class WeightLogService : IWeightLogService
     }
 
     /// <summary>
-    /// Update an existing weight log (weight_kg and note only).
+    /// Update an existing weight log (weight_kg, note and photo_url).
     /// Only the owner can update.
     /// </summary>
     public async Task<WeightLogResponse> UpdateAsync(Guid userId, ulong logId, UpdateWeightLogRequest request)
@@ -88,8 +100,16 @@ public class WeightLogService : IWeightLogService
         if (log.UserId != userId)
             throw new ForbiddenException("Bạn không có quyền sửa log này.");
 
+        string? photoUrl = log.PhotoUrl;
+        if (request.Photo != null && request.Photo.Length > 0)
+        {
+            var publicId = await _storage.UploadAsync(request.Photo, "body_photos");
+            photoUrl = _storage.BuildUrl(publicId);
+        }
+
         log.WeightKg = request.WeightKg;
         log.Note = request.Note;
+        log.PhotoUrl = photoUrl;
 
         // Update user profile weight if this is the latest log
         var profile = await _db.UserProfiles.FirstOrDefaultAsync(p => p.UserId == userId);
@@ -103,6 +123,33 @@ public class WeightLogService : IWeightLogService
                 profile.UpdatedAt = DateTime.UtcNow;
             }
         }
+
+        await _db.SaveChangesAsync();
+
+        return _mapper.Map<WeightLogResponse>(log);
+    }
+
+    /// <summary>
+    /// Upload a body photo to Cloudinary and update the weight log's PhotoUrl.
+    /// </summary>
+    public async Task<WeightLogResponse> UploadPhotoAsync(Guid userId, ulong logId, IFormFile file)
+    {
+        var log = await _db.WeightLogs.FindAsync(logId);
+
+        if (log == null)
+            throw new NotFoundException("Không tìm thấy log cân nặng.");
+
+        if (log.UserId != userId)
+            throw new ForbiddenException("Bạn không có quyền sửa log này.");
+
+        if (file == null || file.Length == 0)
+            throw new BusinessException("INVALID_FILE", "Không tìm thấy file ảnh.");
+
+        // Upload to Cloudinary under the "body_photos" folder
+        var publicId = await _storage.UploadAsync(file, "body_photos");
+        var photoUrl = _storage.BuildUrl(publicId);
+
+        log.PhotoUrl = photoUrl;
 
         await _db.SaveChangesAsync();
 
