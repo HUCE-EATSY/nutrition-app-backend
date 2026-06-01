@@ -359,6 +359,22 @@ public class FoodService : IFoodService
 
         // STEP 3 — Map OFF → FoodItem entity
         var nutriments = offProduct.Product!.Nutriments;
+
+        string? thumbnailUrl = offProduct.Product.ImageUrl;
+        if (!string.IsNullOrWhiteSpace(thumbnailUrl))
+        {
+            try
+            {
+                var publicId = await _storage.UploadUrlAsync(thumbnailUrl, folder: "wao/foods");
+                thumbnailUrl = _storage.BuildUrl(publicId);
+            }
+            catch (Exception)
+            {
+                // Fallback to original Open Food Facts URL if Cloudinary upload fails
+                thumbnailUrl = offProduct.Product.ImageUrl;
+            }
+        }
+
         var newFood = new FoodItem
         {
             Id            = Guid.NewGuid(),
@@ -370,7 +386,7 @@ public class FoodService : IFoodService
             CategoryId    = 10,             // fallback: "Khác" (Other)
             ServingSizeG  = 100m,
             ServingUnitVi = "g",
-            ThumbnailUrl  = offProduct.Product.ImageUrl,
+            ThumbnailUrl  = thumbnailUrl,
             CreatedAt     = DateTime.UtcNow,
             UpdatedAt     = DateTime.UtcNow,
         };

@@ -50,6 +50,28 @@ public class CloudinaryStorageService : IStorageService
     }
 
     /// <summary>
+    /// Upload file từ remote URL lên Cloudinary, trả về public_id.
+    /// </summary>
+    public async Task<string> UploadUrlAsync(string url, string folder = "foods")
+    {
+        var uploadParams = new ImageUploadParams
+        {
+            File = new FileDescription(url),
+            Folder = folder,
+            UseFilename = false,
+            UniqueFilename = true,
+            Overwrite = false,
+        };
+
+        var result = await _cloudinary.UploadAsync(uploadParams);
+
+        if (result.Error != null)
+            throw new InvalidOperationException($"Cloudinary upload failed: {result.Error.Message}");
+
+        return result.PublicId;
+    }
+
+    /// <summary>
     /// Build full HTTPS URL từ public_id.
     /// VD: "foods/xk8q3abc" → "https://res.cloudinary.com/{cloud}/image/upload/foods/xk8q3abc"
     /// Đổi sang provider khác chỉ cần override method này.
