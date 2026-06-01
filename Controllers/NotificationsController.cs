@@ -108,13 +108,13 @@ public class NotificationsController : ControllerBase
     }
 
     /// <summary>
-    /// Đăng ký Device Token cho Push Notification
+    /// Đăng ký Push Token cho thiết bị
     /// </summary>
     [HttpPost("register-token")]
-    public async Task<ActionResult<ApiResponse<object>>> RegisterToken([FromBody] RegisterDeviceTokenRequest request)
+    public async Task<ActionResult<ApiResponse<object>>> RegisterToken([FromBody] RegisterTokenRequest request)
     {
         var userId = User.GetUserId();
-        await _notificationService.RegisterDeviceTokenAsync(userId, request);
+        await _notificationService.RegisterPushTokenAsync(userId, request.Token, request.Platform);
 
         return Ok(ApiResponse<object>.Success(null!, "Đăng ký token thành công"));
     }

@@ -22,6 +22,7 @@ public class User
     public ICollection<WeightLog> WeightLogs { get; set; } = new List<WeightLog>();
     public ICollection<FoodLog> FoodLogs { get; set; } = new List<FoodLog>();
     public ICollection<FoodItem> CreatedFoods { get; set; } = new List<FoodItem>();
+    public ICollection<Menu> Menus { get; set; } = new List<Menu>();
     public ICollection<StepLog> StepLogs { get; set; } = new List<StepLog>();
     public ICollection<UserHealthConnection> HealthConnections { get; set; } = new List<UserHealthConnection>();
     
@@ -29,5 +30,10 @@ public class User
     public ICollection<ExerciseLog> ExerciseLogs { get; set; } = new List<ExerciseLog>();
     public ICollection<UserNotificationSetting> NotificationSettings { get; set; } = new List<UserNotificationSetting>();
     public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
-    public ICollection<UserDeviceToken> DeviceTokens { get; set; } = new List<UserDeviceToken>();
+
+    // Phase 3: Streak & Subscription
+    public ICollection<UserPushToken> PushTokens { get; set; } = new List<UserPushToken>();
+    public UserStreak? Streak { get; set; }
+    public ICollection<StreakFreezeTransaction> StreakFreezeTransactions { get; set; } = new List<StreakFreezeTransaction>();
+    public ICollection<Subscription> Subscriptions { get; set; } = new List<Subscription>();
 }

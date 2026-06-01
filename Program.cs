@@ -22,7 +22,11 @@ using nutrition_app_backend.Services.OpenFoodFacts;
 using nutrition_app_backend.Services.Spoonacular;
 using nutrition_app_backend.Services.Admin.Core;
 using nutrition_app_backend.Services.Admin.FoodManagement;
-using AdminFoodServiceNew = nutrition_app_backend.Services.Admin.FoodManagement.AdminFoodService;
+using nutrition_app_backend.Services.Admin.ExerciseManagement;
+using nutrition_app_backend.Services.Admin.Dashboard;
+using nutrition_app_backend.Services.Admin.Users;
+using nutrition_app_backend.Services.Cron;
+using nutrition_app_backend.Services.Streak;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -69,11 +73,6 @@ builder.Services.AddDbContext<WaoDbContext>(options =>
 );
 
 // =====================
-// HTTP CLIENT (for Google UserInfo API on web login)
-// =====================
-builder.Services.AddHttpClient();
-
-// =====================
 // SERVICES / INTERFACES
 // =====================
 builder.Services.AddScoped<IAuthService, AuthService>();
@@ -85,13 +84,20 @@ builder.Services.AddScoped<IWeightLogService, WeightLogService>();
 builder.Services.AddScoped<IStorageService, CloudinaryStorageService>();
 builder.Services.AddScoped<IExerciseService, ExerciseService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
-builder.Services.AddHostedService<NotificationBackgroundService>();
+builder.Services.AddScoped<IMenuService, MenuService>();
+builder.Services.AddScoped<IStreakService, StreakService>();
+
 builder.Services.AddScoped<IStepLogService, StepLogService>();
 builder.Services.AddScoped<IHealthConnectionService, HealthConnectionService>();
+builder.Services.AddHostedService<StreakEngineJob>();
+builder.Services.AddHostedService<NotificationEngineJob>();
 
 // ===== ADMIN SERVICES =====
-builder.Services.AddScoped<nutrition_app_backend.Services.Admin.FoodManagement.IAdminFoodService, AdminFoodServiceNew>();
+builder.Services.AddScoped<IAdminFoodService, AdminFoodService>();
 builder.Services.AddScoped<IAdminCompositeService, AdminCompositeService>();
+builder.Services.AddScoped<IAdminDashboardService, AdminDashboardService>();
+builder.Services.AddScoped<IAdminUserService, AdminUserService>();
+builder.Services.AddScoped<IAdminExerciseService, AdminExerciseService>();
 
 // ===== OPEN FOOD FACTS =====
 builder.Services.AddHttpClient("OpenFoodFacts", client =>

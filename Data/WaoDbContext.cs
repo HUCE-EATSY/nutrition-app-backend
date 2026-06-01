@@ -20,12 +20,21 @@ public class WaoDbContext : DbContext
     public DbSet<RefreshToken> RefreshTokens { get; set; } = null!;
     public DbSet<WeightLog> WeightLogs { get; set; } = null!;
 
+    // Phase 3 Group
+    public DbSet<UserStreak> UserStreaks { get; set; } = null!;
+    public DbSet<StreakFreezeTransaction> StreakFreezeTransactions { get; set; } = null!;
+    public DbSet<SubscriptionPlan> SubscriptionPlans { get; set; } = null!;
+    public DbSet<Subscription> Subscriptions { get; set; } = null!;
+    public DbSet<SubscriptionEvent> SubscriptionEvents { get; set; } = null!;
+
     // Food Group
     public DbSet<FoodCategory> FoodCategories { get; set; } = null!;
     public DbSet<FoodItem> FoodItems { get; set; } = null!;
     public DbSet<FoodItemImage> FoodItemImages { get; set; } = null!;
     public DbSet<FoodNutrition> FoodNutritions { get; set; } = null!;
     public DbSet<FoodItemComponent> FoodItemComponents { get; set; } = null!;
+    public DbSet<Menu> Menus { get; set; } = null!;
+    public DbSet<MenuFood> MenuFoods { get; set; } = null!;
 
     // Logging Group
     public DbSet<MealType> MealTypes { get; set; } = null!;
@@ -42,7 +51,7 @@ public class WaoDbContext : DbContext
     public DbSet<NotificationType> NotificationTypes { get; set; } = null!;
     public DbSet<UserNotificationSetting> UserNotificationSettings { get; set; } = null!;
     public DbSet<Notification> Notifications { get; set; } = null!;
-    public DbSet<UserDeviceToken> UserDeviceTokens { get; set; } = null!;
+    public DbSet<UserPushToken> UserPushTokens { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -97,6 +106,7 @@ public class WaoDbContext : DbContext
             entity.Property(e => e.UserId).HasColumnType("CHAR(36)");
             entity.Property(e => e.WeightKg).HasPrecision(5, 2);
             entity.Property(e => e.GoalWeightKg).HasPrecision(5, 2);
+            entity.Property(e => e.WeeklyGoalKg).HasPrecision(3, 2);
             entity.Property(e => e.BmrKcal).HasPrecision(7, 2);
             entity.Property(e => e.TdeeKcal).HasPrecision(7, 2);
             entity.Property(e => e.TargetCalories).HasPrecision(7, 2);
@@ -116,6 +126,7 @@ public class WaoDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.UserId).HasColumnType("CHAR(36)");
             entity.Property(e => e.WeightKg).HasPrecision(5, 2);
+            entity.Property(e => e.PhotoUrl).HasMaxLength(2048).IsRequired(false);
             // Chỉ cần 1 Index Unique là đủ cho cả query và tính duy nhất
             entity.HasIndex(e => new { e.UserId, e.LogDate }).IsUnique().HasDatabaseName("idx_weight_user_date");
 
@@ -166,7 +177,112 @@ public class WaoDbContext : DbContext
                   .OnDelete(DeleteBehavior.Cascade);
         });
 
+        // --- PHASE 3: STREAK & SUBSCRIPTION ---
+        modelBuilder.Entity<UserStreak>(entity =>
+        {
+            entity.ToTable("user_streaks");
+            entity.HasKey(e => e.UserId);
+            entity.Property(e => e.UserId).HasColumnType("CHAR(36)");
+
+            entity.HasOne(d => d.User)
+                  .WithOne(p => p.Streak)
+                  .HasForeignKey<UserStreak>(d => d.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<StreakFreezeTransaction>(entity =>
+        {
+            entity.ToTable("streak_freeze_transactions");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnType("CHAR(36)");
+            entity.Property(e => e.UserId).HasColumnType("CHAR(36)");
+
+            entity.HasIndex(e => new { e.UserId, e.FreezeDate }).IsUnique().HasDatabaseName("idx_freeze_user_date");
+
+            entity.HasOne(d => d.User)
+                  .WithMany(p => p.StreakFreezeTransactions)
+                  .HasForeignKey(d => d.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<SubscriptionPlan>(entity =>
+        {
+            entity.ToTable("subscription_plans");
+            entity.HasKey(e => e.Id);
+        });
+
+        modelBuilder.Entity<Subscription>(entity =>
+        {
+            entity.ToTable("subscriptions");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnType("CHAR(36)");
+            entity.Property(e => e.UserId).HasColumnType("CHAR(36)");
+            
+            entity.HasIndex(e => new { e.UserId, e.Status }).HasDatabaseName("idx_subscription_user_status");
+
+            entity.HasOne(d => d.User)
+                  .WithMany(p => p.Subscriptions)
+                  .HasForeignKey(d => d.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(d => d.Plan)
+                  .WithMany()
+                  .HasForeignKey(d => d.PlanId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<SubscriptionEvent>(entity =>
+        {
+            entity.ToTable("subscription_events");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnType("CHAR(36)");
+            entity.Property(e => e.SubscriptionId).HasColumnType("CHAR(36)");
+
+            entity.HasOne(d => d.Subscription)
+                  .WithMany()
+                  .HasForeignKey(d => d.SubscriptionId)
+                  .OnDelete(DeleteBehavior.SetNull);
+        });
+
         // --- GROUP 2: FOOD DATABASE ---
+        modelBuilder.Entity<Menu>(entity =>
+        {
+            entity.ToTable("menus");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnType("CHAR(36)");
+            entity.Property(e => e.UserId).HasColumnType("CHAR(36)");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)");
+            
+            entity.HasIndex(e => e.UserId).HasDatabaseName("idx_menu_user");
+
+            entity.HasOne(d => d.User)
+                  .WithMany(p => p.Menus)
+                  .HasForeignKey(d => d.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<MenuFood>(entity =>
+        {
+            entity.ToTable("menu_foods");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnType("CHAR(36)");
+            entity.Property(e => e.MenuId).HasColumnType("CHAR(36)");
+            entity.Property(e => e.FoodItemId).HasColumnType("CHAR(36)");
+
+            entity.HasIndex(e => new { e.MenuId, e.FoodItemId }).IsUnique();
+
+            entity.HasOne(d => d.Menu)
+                  .WithMany(p => p.MenuFoods)
+                  .HasForeignKey(d => d.MenuId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(d => d.FoodItem)
+                  .WithMany(p => p.MenuFoods)
+                  .HasForeignKey(d => d.FoodItemId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
         modelBuilder.Entity<FoodCategory>(entity =>
         {
             entity.ToTable("food_categories");
@@ -311,6 +427,7 @@ public class WaoDbContext : DbContext
             entity.ToTable("exercises");
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id).HasColumnType("CHAR(36)");
+            entity.Property(e => e.CreatedBy).HasColumnType("CHAR(36)");
             entity.Property(e => e.MetValue).HasPrecision(5, 2);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)");
@@ -322,6 +439,11 @@ public class WaoDbContext : DbContext
                   .WithMany(p => p.Exercises)
                   .HasForeignKey(d => d.CategoryId)
                   .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(d => d.Creator)
+                  .WithMany()
+                  .HasForeignKey(d => d.CreatedBy)
+                  .OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<ExerciseLog>(entity =>
@@ -405,20 +527,19 @@ public class WaoDbContext : DbContext
                   .OnDelete(DeleteBehavior.Restrict);
         });
 
-        modelBuilder.Entity<UserDeviceToken>(entity =>
+        modelBuilder.Entity<UserPushToken>(entity =>
         {
-            entity.ToTable("user_device_tokens");
+            entity.ToTable("user_push_tokens");
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id).HasColumnType("CHAR(36)");
             entity.Property(e => e.UserId).HasColumnType("CHAR(36)");
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)");
-
-            entity.HasIndex(e => e.DeviceToken).IsUnique()
-                  .HasDatabaseName("idx_user_device_token_unique");
+            
+            entity.HasIndex(e => e.Token).IsUnique().HasDatabaseName("idx_push_token_unique");
 
             entity.HasOne(d => d.User)
-                  .WithMany(p => p.DeviceTokens)
+                  .WithMany(p => p.PushTokens)
                   .HasForeignKey(d => d.UserId)
                   .OnDelete(DeleteBehavior.Cascade);
         });
@@ -454,39 +575,38 @@ public class WaoDbContext : DbContext
 
         modelBuilder.Entity<Exercise>().HasData(
             // Cardio
-            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000001"), CategoryId = 1, NameVi = "Chạy bộ", NameEn = "Running", MetValue = 8.0m, Unit = "minutes", IconUrl = "https://res.cloudinary.com/drsgmoufr/image/upload/v1779732742/chay_bo_i0xdol.jpg", Status = 1, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
-            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000002"), CategoryId = 1, NameVi = "Đi bộ", NameEn = "Walking", MetValue = 3.5m, Unit = "minutes", IconUrl = "https://res.cloudinary.com/drsgmoufr/image/upload/v1779732742/di_bo_zttbcb.jpg", Status = 1, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
-            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000003"), CategoryId = 1, NameVi = "Đạp xe", NameEn = "Cycling", MetValue = 7.5m, Unit = "minutes", IconUrl = "https://res.cloudinary.com/drsgmoufr/image/upload/v1779732742/dap_xe_ydjkou.jpg", Status = 1, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
-            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000004"), CategoryId = 1, NameVi = "Bơi lội", NameEn = "Swimming", MetValue = 9.0m, Unit = "minutes", IconUrl = "https://res.cloudinary.com/drsgmoufr/image/upload/v1779732740/boi_loi_ia9sol.jpg", Status = 1, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
-            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000005"), CategoryId = 1, NameVi = "Nhảy dây", NameEn = "Jump Rope", MetValue = 12.0m, Unit = "minutes", IconUrl = "https://res.cloudinary.com/drsgmoufr/image/upload/v1779732743/nhay_day_deaept.jpg", Status = 1, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
-            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000014"), CategoryId = 1, NameVi = "Khiêu vũ", NameEn = "Dancing", MetValue = 4.5m, Unit = "minutes", IconUrl = "https://res.cloudinary.com/drsgmoufr/image/upload/v1779732742/khieu_vu_wpukmv.jpg", Status = 1, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
-            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000015"), CategoryId = 1, NameVi = "Aerobic", NameEn = "Aerobics", MetValue = 7.3m, Unit = "minutes", IconUrl = "https://res.cloudinary.com/drsgmoufr/image/upload/v1779732740/aerobic_dm9nsd.jpg", Status = 1, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
-            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000016"), CategoryId = 1, NameVi = "Leo núi", NameEn = "Climbing", MetValue = 8.0m, Unit = "minutes", IconUrl = "https://res.cloudinary.com/drsgmoufr/image/upload/v1779732743/leo_nui_im09ry.jpg", Status = 1, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000001"), CategoryId = 1, NameVi = "Chạy bộ", NameEn = "Running", MetValue = 8.0m, Unit = "minutes", Status = 1, IconUrl = "https://res.cloudinary.com/drsgmoufr/image/upload/v1779732742/chay_bo_i0xdol.jpg", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000002"), CategoryId = 1, NameVi = "Đi bộ", NameEn = "Walking", MetValue = 3.5m, Unit = "minutes", Status = 1, IconUrl = "https://res.cloudinary.com/drsgmoufr/image/upload/v1779732742/di_bo_zttbcb.jpg", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000003"), CategoryId = 1, NameVi = "Đạp xe", NameEn = "Cycling", MetValue = 7.5m, Unit = "minutes", Status = 1, IconUrl = "https://res.cloudinary.com/drsgmoufr/image/upload/v1779732742/dap_xe_ydjkou.jpg", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000004"), CategoryId = 1, NameVi = "Bơi lội", NameEn = "Swimming", MetValue = 9.0m, Unit = "minutes", Status = 1, IconUrl = "https://res.cloudinary.com/drsgmoufr/image/upload/v1779732740/boi_loi_ia9sol.jpg", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000005"), CategoryId = 1, NameVi = "Nhảy dây", NameEn = "Jump Rope", MetValue = 12.0m, Unit = "minutes", Status = 1, IconUrl = "https://res.cloudinary.com/drsgmoufr/image/upload/v1779732743/nhay_day_deaept.jpg", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000014"), CategoryId = 1, NameVi = "Lướt sóng", NameEn = "Surfing", MetValue = 3.0m, Unit = "minutes", Status = 1, IconUrl = "https://res.cloudinary.com/drsgmoufr/image/upload/v1779732743/luot_song_omzllo.jpg", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000015"), CategoryId = 1, NameVi = "Khiêu vũ", NameEn = "Dancing", MetValue = 4.5m, Unit = "minutes", Status = 1, IconUrl = "https://res.cloudinary.com/drsgmoufr/image/upload/v1779732742/khieu_vu_wpukmv.jpg", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000016"), CategoryId = 1, NameVi = "Aerobic", NameEn = "Aerobics", MetValue = 7.0m, Unit = "minutes", Status = 1, IconUrl = "https://res.cloudinary.com/drsgmoufr/image/upload/v1779732740/aerobic_dm9nsd.jpg", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
             
             // Strength
-            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000006"), CategoryId = 2, NameVi = "Tập tạ", NameEn = "Weight Training", MetValue = 6.0m, Unit = "minutes", IconUrl = "https://res.cloudinary.com/drsgmoufr/image/upload/v1779732743/nang_ta_miloiy.jpg", Status = 1, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
-            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000007"), CategoryId = 2, NameVi = "Hít đất", NameEn = "Push-ups", MetValue = 8.0m, Unit = "reps", IconUrl = "https://res.cloudinary.com/drsgmoufr/image/upload/v1779732742/hit_dat_elcd4c.jpg", Status = 1, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
-            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000008"), CategoryId = 2, NameVi = "Gập bụng", NameEn = "Sit-ups", MetValue = 8.0m, Unit = "reps", IconUrl = "https://res.cloudinary.com/drsgmoufr/image/upload/v1779732742/gap_bung_g2js1l.jpg", Status = 1, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
-            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000017"), CategoryId = 2, NameVi = "Kéo xà", NameEn = "Pull-ups", MetValue = 8.0m, Unit = "reps", IconUrl = "https://res.cloudinary.com/drsgmoufr/image/upload/v1779732743/keo_xa_vlicau.jpg", Status = 1, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
-            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000018"), CategoryId = 2, NameVi = "Squat", NameEn = "Squats", MetValue = 5.5m, Unit = "reps", IconUrl = "https://res.cloudinary.com/drsgmoufr/image/upload/v1779732741/squat_pcgt35.jpg", Status = 1, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
-            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000019"), CategoryId = 2, NameVi = "Plank", NameEn = "Plank", MetValue = 4.0m, Unit = "minutes", IconUrl = "https://res.cloudinary.com/drsgmoufr/image/upload/v1779732740/plank_k0rbjk.jpg", Status = 1, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000006"), CategoryId = 2, NameVi = "Nâng tạ", NameEn = "Weight Training", MetValue = 6.0m, Unit = "minutes", Status = 1, IconUrl = "https://res.cloudinary.com/drsgmoufr/image/upload/v1779732743/nang_ta_miloiy.jpg", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000007"), CategoryId = 2, NameVi = "HIT (High Intensity Training)", NameEn = "HIIT", MetValue = 8.0m, Unit = "minutes", Status = 1, IconUrl = "https://res.cloudinary.com/drsgmoufr/image/upload/v1779732742/hit_dat_elcd4c.jpg", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000008"), CategoryId = 2, NameVi = "Gập bụng", NameEn = "Sit-ups", MetValue = 8.0m, Unit = "reps", Status = 1, IconUrl = "https://res.cloudinary.com/drsgmoufr/image/upload/v1779732742/gap_bung_g2js1l.jpg", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000010"), CategoryId = 2, NameVi = "Plank", NameEn = "Plank", MetValue = 4.0m, Unit = "minutes", Status = 1, IconUrl = "https://res.cloudinary.com/drsgmoufr/image/upload/v1779732740/plank_k0rbjk.jpg", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000017"), CategoryId = 2, NameVi = "Leo núi", NameEn = "Climbing", MetValue = 8.0m, Unit = "minutes", Status = 1, IconUrl = "https://res.cloudinary.com/drsgmoufr/image/upload/v1779732743/leo_nui_im09ry.jpg", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000018"), CategoryId = 2, NameVi = "Kéo xà", NameEn = "Pull-ups", MetValue = 8.0m, Unit = "reps", Status = 1, IconUrl = "https://res.cloudinary.com/drsgmoufr/image/upload/v1779732743/keo_xa_vlicau.jpg", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000019"), CategoryId = 2, NameVi = "Squat", NameEn = "Squat", MetValue = 5.0m, Unit = "reps", Status = 1, IconUrl = "https://res.cloudinary.com/drsgmoufr/image/upload/v1779732741/squat_pcgt35.jpg", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
             
-            // Yoga & Flexibility
-            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000009"), CategoryId = 3, NameVi = "Yoga", NameEn = "Yoga", MetValue = 3.0m, Unit = "minutes", IconUrl = "https://res.cloudinary.com/drsgmoufr/image/upload/v1779732742/yoga_bitlo9.jpg", Status = 1, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
-            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000010"), CategoryId = 3, NameVi = "Pilates", NameEn = "Pilates", MetValue = 4.0m, Unit = "minutes", IconUrl = "https://res.cloudinary.com/drsgmoufr/image/upload/v1779732742/yoga_bitlo9.jpg", Status = 1, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            // Yoga
+            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000009"), CategoryId = 3, NameVi = "Yoga", NameEn = "Yoga", MetValue = 3.0m, Unit = "minutes", Status = 1, IconUrl = "https://res.cloudinary.com/drsgmoufr/image/upload/v1779732742/yoga_bitlo9.jpg", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
             
             // Sports
-            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000011"), CategoryId = 4, NameVi = "Bóng đá", NameEn = "Football/Soccer", MetValue = 10.0m, Unit = "minutes", IconUrl = "https://res.cloudinary.com/drsgmoufr/image/upload/v1779732741/bong_da_pcibi3.jpg", Status = 1, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
-            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000012"), CategoryId = 4, NameVi = "Cầu lông", NameEn = "Badminton", MetValue = 7.0m, Unit = "minutes", IconUrl = "https://res.cloudinary.com/drsgmoufr/image/upload/v1779732742/cau_long_sxihz6.jpg", Status = 1, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
-            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000013"), CategoryId = 4, NameVi = "Bóng rổ", NameEn = "Basketball", MetValue = 8.0m, Unit = "minutes", IconUrl = "https://res.cloudinary.com/drsgmoufr/image/upload/v1779732741/bong_ro_zmldle.jpg", Status = 1, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
-            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000020"), CategoryId = 4, NameVi = "Lướt sóng", NameEn = "Surfing", MetValue = 5.0m, Unit = "minutes", IconUrl = "https://res.cloudinary.com/drsgmoufr/image/upload/v1779732743/luot_song_omzllo.jpg", Status = 1, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
-            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000021"), CategoryId = 4, NameVi = "Golf", NameEn = "Golf", MetValue = 4.5m, Unit = "minutes", IconUrl = "https://res.cloudinary.com/drsgmoufr/image/upload/v1779732742/golf_zj5sbo.jpg", Status = 1, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
-            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000022"), CategoryId = 4, NameVi = "Tennis", NameEn = "Tennis", MetValue = 7.3m, Unit = "minutes", IconUrl = "https://res.cloudinary.com/drsgmoufr/image/upload/v1779732742/tennis_pcqhh5.jpg", Status = 1, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
-            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000023"), CategoryId = 4, NameVi = "Trượt ván", NameEn = "Skateboarding", MetValue = 5.0m, Unit = "minutes", IconUrl = "https://res.cloudinary.com/drsgmoufr/image/upload/v1779732741/truot_van_rxlkn5.jpg", Status = 1, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
-            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000024"), CategoryId = 4, NameVi = "Bóng chày", NameEn = "Baseball", MetValue = 5.0m, Unit = "minutes", IconUrl = "https://res.cloudinary.com/drsgmoufr/image/upload/v1779732741/bong_chay_uiwjae.jpg", Status = 1, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
-            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000025"), CategoryId = 4, NameVi = "Bóng chuyền", NameEn = "Volleyball", MetValue = 4.0m, Unit = "minutes", IconUrl = "https://res.cloudinary.com/drsgmoufr/image/upload/v1779732741/bong_chuyen_v6us4w.jpg", Status = 1, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
-            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000026"), CategoryId = 4, NameVi = "Pickle Ball", NameEn = "Pickleball", MetValue = 4.5m, Unit = "minutes", IconUrl = "https://res.cloudinary.com/drsgmoufr/image/upload/v1779732740/pickle_ball_ciqj11.jpg", Status = 1, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
-            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000027"), CategoryId = 4, NameVi = "Bóng bàn", NameEn = "Table Tennis", MetValue = 4.0m, Unit = "minutes", IconUrl = "https://res.cloudinary.com/drsgmoufr/image/upload/v1779732740/bong_ban_kgbyqe.jpg", Status = 1, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow }
+            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000011"), CategoryId = 4, NameVi = "Bóng đá", NameEn = "Football/Soccer", MetValue = 10.0m, Unit = "minutes", Status = 1, IconUrl = "https://res.cloudinary.com/drsgmoufr/image/upload/v1779732741/bong_da_pcibi3.jpg", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000012"), CategoryId = 4, NameVi = "Cầu lông", NameEn = "Badminton", MetValue = 7.0m, Unit = "minutes", Status = 1, IconUrl = "https://res.cloudinary.com/drsgmoufr/image/upload/v1779732742/cau_long_sxihz6.jpg", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000013"), CategoryId = 4, NameVi = "Bóng rổ", NameEn = "Basketball", MetValue = 8.0m, Unit = "minutes", Status = 1, IconUrl = "https://res.cloudinary.com/drsgmoufr/image/upload/v1779732741/bong_ro_zmldle.jpg", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000020"), CategoryId = 4, NameVi = "Golf", NameEn = "Golf", MetValue = 4.5m, Unit = "minutes", Status = 1, IconUrl = "https://res.cloudinary.com/drsgmoufr/image/upload/v1779732742/golf_zj5sbo.jpg", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000021"), CategoryId = 4, NameVi = "Tennis", NameEn = "Tennis", MetValue = 7.0m, Unit = "minutes", Status = 1, IconUrl = "https://res.cloudinary.com/drsgmoufr/image/upload/v1779732742/tennis_pcqhh5.jpg", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000022"), CategoryId = 4, NameVi = "Trượt ván", NameEn = "Skateboarding", MetValue = 5.0m, Unit = "minutes", Status = 1, IconUrl = "https://res.cloudinary.com/drsgmoufr/image/upload/v1779732741/truot_van_rxlkn5.jpg", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000023"), CategoryId = 4, NameVi = "Bóng chày", NameEn = "Baseball", MetValue = 5.0m, Unit = "minutes", Status = 1, IconUrl = "https://res.cloudinary.com/drsgmoufr/image/upload/v1779732741/bong_chay_uiwjae.jpg", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000024"), CategoryId = 4, NameVi = "Bóng chuyền", NameEn = "Volleyball", MetValue = 4.0m, Unit = "minutes", Status = 1, IconUrl = "https://res.cloudinary.com/drsgmoufr/image/upload/v1779732741/bong_chuyen_v6us4w.jpg", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000025"), CategoryId = 4, NameVi = "Pickle Ball", NameEn = "Pickleball", MetValue = 6.0m, Unit = "minutes", Status = 1, IconUrl = "https://res.cloudinary.com/drsgmoufr/image/upload/v1779732740/pickle_ball_ciqj11.jpg", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Exercise { Id = Guid.Parse("10000000-0000-0000-0000-000000000026"), CategoryId = 4, NameVi = "Bóng bàn", NameEn = "Table Tennis", MetValue = 4.0m, Unit = "minutes", Status = 1, IconUrl = "https://res.cloudinary.com/drsgmoufr/image/upload/v1779732740/bong_ban_kgbyqe.jpg", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow }
         );
 
         modelBuilder.Entity<NotificationType>().HasData(
@@ -497,6 +617,12 @@ public class WaoDbContext : DbContext
             new NotificationType { Id = 5, Code = "GOAL_ACHIEVED", NameVi = "Đạt mục tiêu", NameEn = "Goal Achieved", Description = "Thông báo khi đạt mục tiêu" },
             new NotificationType { Id = 6, Code = "DAILY_SUMMARY", NameVi = "Tổng kết ngày", NameEn = "Daily Summary", Description = "Tổng kết dinh dưỡng và tập luyện trong ngày" },
             new NotificationType { Id = 7, Code = "WEEKLY_REPORT", NameVi = "Báo cáo tuần", NameEn = "Weekly Report", Description = "Báo cáo tiến độ hàng tuần" }
+        );
+
+        modelBuilder.Entity<SubscriptionPlan>().HasData(
+            new SubscriptionPlan { Id = 1, Code = "FREE", Name = "Gói Miễn Phí", Price = 0, DurationDays = 99999, CreatedAt = new DateTime(2024,1,1,0,0,0,DateTimeKind.Utc), UpdatedAt = new DateTime(2024,1,1,0,0,0,DateTimeKind.Utc) },
+            new SubscriptionPlan { Id = 2, Code = "MONTHLY_PREMIUM", Name = "Premium 1 Tháng", Price = 59000, DurationDays = 30, CreatedAt = new DateTime(2024,1,1,0,0,0,DateTimeKind.Utc), UpdatedAt = new DateTime(2024,1,1,0,0,0,DateTimeKind.Utc) },
+            new SubscriptionPlan { Id = 3, Code = "YEARLY_PREMIUM", Name = "Premium 1 Năm", Price = 499000, DurationDays = 365, CreatedAt = new DateTime(2024,1,1,0,0,0,DateTimeKind.Utc), UpdatedAt = new DateTime(2024,1,1,0,0,0,DateTimeKind.Utc) }
         );
     }
 
