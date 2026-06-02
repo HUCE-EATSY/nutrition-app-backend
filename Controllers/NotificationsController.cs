@@ -106,4 +106,33 @@ public class NotificationsController : ControllerBase
 
         return Ok(ApiResponse<int>.Success(count, "Lấy số lượng thông báo chưa đọc thành công"));
     }
+
+    /// <summary>
+    /// Đăng ký Push Token cho thiết bị
+    /// </summary>
+    [HttpPost("register-token")]
+    public async Task<ActionResult<ApiResponse<object>>> RegisterToken([FromBody] RegisterTokenRequest request)
+    {
+        var userId = User.GetUserId();
+        await _notificationService.RegisterPushTokenAsync(userId, request.Token, request.Platform);
+
+        return Ok(ApiResponse<object>.Success(null!, "Đăng ký token thành công"));
+    }
+
+    /// <summary>
+    /// TEST: Gửi thông báo test cho user hiện tại
+    /// </summary>
+    [HttpPost("test/send")]
+    public async Task<ActionResult<ApiResponse<object>>> TestSendNotification([FromBody] TestNotificationRequest request)
+    {
+        var userId = User.GetUserId();
+        
+        await _notificationService.SendPushNotificationAsync(
+            userId, 
+            request.Title ?? "Test Notification", 
+            request.Body ?? "Đây là thông báo test từ backend!"
+        );
+
+        return Ok(ApiResponse<object>.Success(null!, "Đã gửi test notification!"));
+    }
 }

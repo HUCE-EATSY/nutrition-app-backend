@@ -31,6 +31,7 @@ public class User
     public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
 
     // Phase 3: Streak & Subscription
+    public ICollection<UserPushToken> PushTokens { get; set; } = new List<UserPushToken>();
     public UserStreak? Streak { get; set; }
     public ICollection<StreakFreezeTransaction> StreakFreezeTransactions { get; set; } = new List<StreakFreezeTransaction>();
     public ICollection<Subscription> Subscriptions { get; set; } = new List<Subscription>();

@@ -10,5 +10,6 @@ public record UserProfileResponse(
     DateOnly DateOfBirth,
     decimal HeightCm,
     decimal WeightKg,
+    ActivityLevel ActivityLevel,
     DateTime UpdatedAt
 );

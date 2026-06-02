@@ -38,6 +38,7 @@ public class UserService : IUserService
             existingProfile.DateOfBirth = request.DateOfBirth;
             existingProfile.HeightCm = request.HeightCm;
             existingProfile.WeightKg = request.WeightKg;
+            existingProfile.ActivityLevel = request.ActivityLevel;
             existingProfile.UpdatedAt = DateTime.UtcNow;
 
             var existingGoals = await _dbContext.UserGoals
@@ -58,6 +59,7 @@ public class UserService : IUserService
                 DateOfBirth = request.DateOfBirth,
                 HeightCm = request.HeightCm,
                 WeightKg = request.WeightKg,
+                ActivityLevel = request.ActivityLevel,
             };
             _dbContext.UserProfiles.Add(profile);
         }
@@ -78,7 +80,7 @@ public class UserService : IUserService
         } 
 
         decimal[] activityMultipliers = { 0, 1.2m, 1.375m, 1.55m, 1.725m, 1.9m };
-        decimal tdee = bmr * activityMultipliers[request.ActivityLevel];
+        decimal tdee = bmr * activityMultipliers[(int)request.ActivityLevel];
 
         // Calculate dynamic target calories based on goal type: 1 = Lose (-500), 2 = Gain (+500), 3 = Maintain (+0)
         decimal targetCalories = request.GoalType switch
@@ -106,7 +108,7 @@ public class UserService : IUserService
             WeightKg = request.WeightKg,
             GoalWeightKg = request.GoalWeightKg,
             WeeklyGoalKg = request.WeeklyGoalKg,
-            ActivityLevel = request.ActivityLevel,
+            ActivityLevel = (byte)request.ActivityLevel,
             GoalType = request.GoalType,
             BmrKcal = bmr,
             TdeeKcal = tdee,
@@ -141,6 +143,7 @@ public class UserService : IUserService
         profile.DateOfBirth = request.DateOfBirth;
         profile.HeightCm = request.HeightCm;
         profile.WeightKg = request.WeightKg;
+        profile.ActivityLevel = request.ActivityLevel;
         profile.UpdatedAt = DateTime.UtcNow;
 
         // 2. CẬP NHẬT GOAL NẾU CÓ THAY ĐỔI
@@ -162,7 +165,7 @@ public class UserService : IUserService
             }
 
             decimal[] activityMultipliers = { 0, 1.2m, 1.375m, 1.55m, 1.725m, 1.9m };
-            decimal tdee = bmr * activityMultipliers[request.ActivityLevel];
+            decimal tdee = bmr * activityMultipliers[(int)request.ActivityLevel];
 
             // Calculate dynamic target calories based on goal type stored in DB
             decimal targetCalories = goal.GoalType switch
@@ -175,7 +178,7 @@ public class UserService : IUserService
 
             // Cập nhật goal
             goal.WeightKg = request.WeightKg;
-            goal.ActivityLevel = request.ActivityLevel;
+            goal.ActivityLevel = (byte)request.ActivityLevel;
             goal.BmrKcal = bmr;
             goal.TdeeKcal = tdee;
             goal.TargetCalories = targetCalories;
@@ -294,5 +297,57 @@ public class UserService : IUserService
 
         await _dbContext.SaveChangesAsync();
     }
-}
 
+    /// <summary>
+    /// Tính toán BMR và TDEE dựa trên thông tin profile của user
+    /// </summary>
+    public async Task<CalorieCalculationResponse> CalculateCaloriesAsync(Guid userId)
+    {
+        var profile = await _dbContext.UserProfiles.FindAsync(userId);
+        if (profile == null)
+            throw new NotFoundException("User profile not found. Please complete onboarding first.");
+
+        // Default ActivityLevel = Sedentary nếu = 0 (user cũ chưa cập nhật)
+        var activityLevel = profile.ActivityLevel == 0 ? ActivityLevel.Sedentary : profile.ActivityLevel;
+
+        // Tính tuổi
+        int age = DateTime.Now.Year - profile.DateOfBirth.Year;
+        if (DateTime.Now.DayOfYear < profile.DateOfBirth.DayOfYear)
+            age--;
+
+        // Tính BMR
+        decimal bmr = CalorieCalculationService.CalculateBMR(
+            profile.WeightKg, 
+            profile.HeightCm, 
+            age, 
+            profile.Gender
+        );
+
+        // Tính TDEE
+        decimal tdee = CalorieCalculationService.CalculateTDEE(bmr, activityLevel);
+        
+        // TDEE cho tracking theo tuần (giống TDEE hàng ngày)
+        decimal weeklyTdee = CalorieCalculationService.CalculateWeeklyTDEE(tdee);
+        
+        // Lấy hệ số và mô tả
+        decimal multiplier = CalorieCalculationService.GetActivityMultiplier(activityLevel);
+        string activityDescription = activityLevel switch
+        {
+            ActivityLevel.Sedentary => "Ít vận động (làm văn phòng, không tập)",
+            ActivityLevel.LightlyActive => "Vận động nhẹ (tập 1-3 ngày/tuần)",
+            ActivityLevel.ModeratelyActive => "Vận động vừa (tập 3-5 ngày/tuần)",
+            ActivityLevel.VeryActive => "Vận động nặng (tập 6-7 ngày/tuần)",
+            ActivityLevel.ExtraActive => "Vận động rất nặng (lao động chân tay, tập cường độ cao)",
+            _ => "Không xác định"
+        };
+
+        return new CalorieCalculationResponse
+        {
+            BMR = bmr,
+            TDEE = tdee,
+            WeeklyTDEE = weeklyTdee,
+            ActivityMultiplier = multiplier,
+            ActivityDescription = activityDescription
+        };
+    }
+}

@@ -11,6 +11,7 @@ public class UserProfile
     public DateOnly DateOfBirth { get; set; }
     public decimal HeightCm { get; set; }
     public decimal WeightKg { get; set; }
+    public ActivityLevel ActivityLevel { get; set; } = ActivityLevel.Sedentary;
     public DateTime UpdatedAt { get; set; }
     
     public User User { get; set; } = null!;

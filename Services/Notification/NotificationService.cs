@@ -185,4 +185,93 @@ public class NotificationService : INotificationService
             .Where(n => n.UserId == userId && !n.IsRead)
             .CountAsync();
     }
+
+    private static readonly HttpClient _httpClient = new HttpClient();
+
+    public async Task RegisterPushTokenAsync(Guid userId, string token, string platform)
+    {
+        var existingToken = await _context.UserPushTokens
+            .FirstOrDefaultAsync(t => t.UserId == userId && t.Token == token);
+
+        if (existingToken == null)
+        {
+            var newToken = new UserPushToken
+            {
+                Id = Guid.NewGuid(),
+                UserId = userId,
+                Token = token,
+                Platform = platform,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            _context.UserPushTokens.Add(newToken);
+
+            // Tự động tạo cài đặt mặc định nếu user chưa có
+            var hasSettings = await _context.UserNotificationSettings.AnyAsync(s => s.UserId == userId);
+            if (!hasSettings)
+            {
+                var types = await _context.NotificationTypes.ToListAsync();
+                var now = DateTime.UtcNow;
+                foreach (var type in types)
+                {
+                    string? defaultTime = type.Code switch
+                    {
+                        "MEAL_REMINDER" => "08:00",
+                        "EXERCISE_REMINDER" => "17:00",
+                        "WATER_REMINDER" => "10:00",
+                        "DAILY_SUMMARY" => "21:00",
+                        "WEEKLY_REPORT" => "09:00",
+                        _ => null
+                    };
+                    
+                    var setting = new UserNotificationSetting
+                    {
+                        Id = Guid.NewGuid(),
+                        UserId = userId,
+                        NotificationTypeId = type.Id,
+                        IsEnabled = true,
+                        ReminderTime = defaultTime,
+                        DaysOfWeek = type.Code == "WEEKLY_REPORT" ? "8" : "2,3,4,5,6,7,8",
+                        CreatedAt = now,
+                        UpdatedAt = now
+                    };
+                    _context.UserNotificationSettings.Add(setting);
+                }
+            }
+
+            await _context.SaveChangesAsync();
+        }
+    }
+
+    public async Task SendPushNotificationAsync(Guid userId, string title, string body, object? data = null)
+    {
+        var tokens = await _context.UserPushTokens
+            .Where(t => t.UserId == userId)
+            .Select(t => t.Token)
+            .ToListAsync();
+
+        if (!tokens.Any())
+            return;
+
+        var messages = tokens.Select(token => new
+        {
+            to = token,
+            sound = "default",
+            title = title,
+            body = body,
+            data = data
+        }).ToList();
+
+        var json = System.Text.Json.JsonSerializer.Serialize(messages);
+        var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+
+        try
+        {
+            await _httpClient.PostAsync("https://exp.host/--/api/v2/push/send", content);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error sending push notification: {ex.Message}");
+        }
+    }
 }
