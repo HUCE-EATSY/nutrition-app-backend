@@ -13,7 +13,8 @@ using System.Threading.Tasks;
 namespace nutrition_app_backend.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/streaks")]
+    [Route("api/streak")]
     [Authorize]
     public class StreakController : ControllerBase
     {
@@ -92,7 +93,8 @@ namespace nutrition_app_backend.Controllers
                 longestStreak = streak.LongestStreak,
                 freezeCount = streak.FreezeCount,
                 freezesUsedThisWeek = freezesUsedThisWeek,
-                weeklyProgress = weeklyProgress
+                weeklyProgress = weeklyProgress,
+                isLoggedToday = streak.LastLogDate.HasValue && streak.LastLogDate.Value.AddHours(7).Date == todayVn
             };
 
             return Ok(ApiResponse<object>.Success(result, "Lấy thông tin streak thành công"));
@@ -178,6 +180,93 @@ namespace nutrition_app_backend.Controllers
             Guid userId = User.GetUserId();
             await _streakService.AdjustStreakForTestAsync(userId, request.StreakToAdd, request.FreezeToAdd);
             return Ok(ApiResponse<object>.Success(new object(), "Đã cập nhật Streak thành công (Test Mode)."));
+        }
+
+        [HttpPost("sim-log")]
+        public async Task<ActionResult<ApiResponse<object>>> SimulateLog()
+        {
+            Guid userId = User.GetUserId();
+
+            FoodItem? foodItem = await _context.FoodItems.FirstOrDefaultAsync();
+            if (foodItem == null)
+            {
+                foodItem = new FoodItem
+                {
+                    Id = Guid.NewGuid(),
+                    NameVi = "Món ăn nâng chuỗi tự động",
+                    NameEn = "Auto Streak Booster",
+                    CategoryId = 1,
+                    Status = (nutrition_app_backend.Enums.FoodStatus)1,
+                    ServingSizeG = 100,
+                    Nutrition = new FoodNutrition
+                    {
+                        CaloriesKcal = 500,
+                        ProteinG = 20,
+                        CarbsG = 50,
+                        FatG = 10
+                    }
+                };
+                _context.FoodItems.Add(foodItem);
+                await _context.SaveChangesAsync();
+            }
+
+            UserStreak? streak = await _context.UserStreaks.Include(s => s.User).ThenInclude(u => u.Goals).FirstOrDefaultAsync(s => s.UserId == userId);
+            if (streak == null)
+            {
+                streak = new UserStreak { UserId = userId };
+                _context.UserStreaks.Add(streak);
+                await _context.SaveChangesAsync();
+            }
+
+            if (streak.FreezeCount < 3)
+            {
+                streak.FreezeCount = 3;
+            }
+
+            UserGoal? activeGoal = streak.User.Goals.Where(g => g.IsActive).OrderByDescending(g => g.CreatedAt).FirstOrDefault() 
+                                 ?? streak.User.Goals.OrderByDescending(g => g.CreatedAt).FirstOrDefault();
+            decimal bmr = activeGoal?.BmrKcal ?? 1500m;
+            decimal targetKcal = bmr * 0.5m;
+
+            DateTime yesterday = DateTime.UtcNow.AddHours(7).Date.AddDays(-1);
+            
+            List<FoodLog> existingLogs = await _context.FoodLogs
+                .Where(f => f.UserId == userId && f.LogDate >= yesterday && f.LogDate < yesterday.AddDays(1))
+                .ToListAsync();
+            _context.FoodLogs.RemoveRange(existingLogs);
+
+            FoodLog log = new FoodLog
+            {
+                UserId = userId,
+                FoodItemId = foodItem.Id,
+                MealTypeId = 1, // Breakfast
+                LogDate = yesterday,
+                QuantityG = (targetKcal / 500m) * 100m + 10m,
+                CaloriesKcal = targetKcal + 100m,
+                ProteinG = 30m,
+                CarbsG = 100m,
+                FatG = 15m
+            };
+
+            _context.FoodLogs.Add(log);
+
+            // Instant Evaluation
+            if (log.CaloriesKcal >= targetKcal)
+            {
+                if (!streak.LastLogDate.HasValue || streak.LastLogDate.Value.AddHours(7).Date < DateTime.UtcNow.AddHours(7).Date)
+                {
+                    streak.CurrentStreak += 1;
+                    if (streak.CurrentStreak > streak.LongestStreak)
+                    {
+                        streak.LongestStreak = streak.CurrentStreak;
+                    }
+                    streak.LastLogDate = DateTime.UtcNow;
+                }
+            }
+
+            await _context.SaveChangesAsync();
+
+            return Ok(ApiResponse<object>.Success(new { currentStreak = streak.CurrentStreak }, "Cập nhật chuỗi thành công!"));
         }
     }
 }
