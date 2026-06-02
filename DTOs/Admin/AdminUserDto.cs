@@ -3,10 +3,12 @@ namespace nutrition_app_backend.DTOs.Admin;
 public class AdminUserDto
 {
     public Guid Id { get; set; }
-    public string? DisplayName { get; set; }
-    public string? Email { get; set; }
-    public byte Role { get; set; }
-    public byte Status { get; set; }
+    public string Email { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
-    public bool IsVip { get; set; } // We can calculate this or mock it
+    public bool IsActive { get; set; }
+    public bool IsLocked { get; set; }
+    public int? VipPackageId { get; set; }
+    public string? VipPackageName { get; set; }
+    public DateTime? VipExpiresAt { get; set; }
 }

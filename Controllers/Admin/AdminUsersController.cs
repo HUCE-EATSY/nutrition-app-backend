@@ -16,9 +16,13 @@ public class AdminUsersController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAllUsers([FromQuery] int page = 1, [FromQuery] string? search = null)
+    public async Task<IActionResult> GetAllUsers(
+        [FromQuery] int page = 1, 
+        [FromQuery] int pageSize = 20,
+        [FromQuery] string? search = null,
+        [FromQuery] string? status = null)
     {
-        var users = await _userService.GetAllUsersAsync(page, 20, search);
+        var users = await _userService.GetAllUsersAsync(page, pageSize, search, status);
         return Ok(new { success = true, data = users });
     }
 
@@ -34,7 +38,7 @@ public class AdminUsersController : ControllerBase
     public async Task<IActionResult> ToggleLock(Guid id)
     {
         var result = await _userService.ToggleUserLockAsync(id);
-        return Ok(new { success = true });
+        return Ok(new { success = true, data = result });
     }
 
     [HttpGet("stats")]
