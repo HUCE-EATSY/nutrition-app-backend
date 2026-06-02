@@ -45,7 +45,9 @@ public class NotificationEngineJob : BackgroundService
     private async Task ProcessNotificationsAsync(CancellationToken stoppingToken)
     {
         var currentTimeStr = DateTime.Now.ToString("HH:mm");
-        _logger.LogInformation($"NotificationEngineJob checking notifications for time: {currentTimeStr}");
+        var currentDayOfWeek = ((int)DateTime.Now.DayOfWeek + 1).ToString(); // 2=Mon, 3=Tue, ..., 8=Sun
+        
+        _logger.LogInformation($"NotificationEngineJob checking notifications for time: {currentTimeStr}, day: {currentDayOfWeek}");
 
         using var scope = _serviceProvider.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<WaoDbContext>();
@@ -64,6 +66,17 @@ public class NotificationEngineJob : BackgroundService
         {
             try
             {
+                // Check if today matches DaysOfWeek setting
+                if (!string.IsNullOrEmpty(setting.DaysOfWeek))
+                {
+                    var allowedDays = setting.DaysOfWeek.Split(',').Select(d => d.Trim());
+                    if (!allowedDays.Contains(currentDayOfWeek))
+                    {
+                        _logger.LogDebug($"Skipping notification for user {setting.UserId}, not scheduled for day {currentDayOfWeek}");
+                        continue;
+                    }
+                }
+                
                 await ProcessSettingAsync(setting, context, notificationService, stoppingToken);
             }
             catch (Exception ex)

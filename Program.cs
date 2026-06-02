@@ -88,6 +88,7 @@ builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IStepLogService, StepLogService>();
 builder.Services.AddScoped<IHealthConnectionService, HealthConnectionService>();
 builder.Services.AddHostedService<StreakEngineJob>();
+builder.Services.AddHostedService<NotificationEngineJob>();
 
 // ===== ADMIN SERVICES =====
 builder.Services.AddScoped<nutrition_app_backend.Services.Admin.FoodManagement.IAdminFoodService, nutrition_app_backend.Services.Admin.FoodManagement.AdminFoodService>();
