@@ -120,7 +120,10 @@ public class FoodService : IFoodService
 
         var items = itemsToReturn.Select(fi =>
         {
-            string? resolvedImageUrl = fi.Source == FoodSource.Community
+            bool useThumbnail = fi.Source == FoodSource.Community 
+                             || fi.Source == FoodSource.BarcodeCommunity 
+                             || fi.Source == FoodSource.OpenFoodFacts;
+            string? resolvedImageUrl = useThumbnail
                 ? fi.ThumbnailUrl
                 : (fi.ActiveImage != null ? _storage.BuildUrl(fi.ActiveImage.StoragePath) : null);
 
@@ -213,7 +216,7 @@ public class FoodService : IFoodService
                 fii.StorageProvider AS ImageStorageProvider
             FROM food_items fi
             LEFT JOIN food_nutrition fn ON fn.FoodItemId = fi.Id
-            LEFT JOIN food_item_images fii ON fi.Source != {(byte)FoodSource.Community} AND fii.Id = fi.ActiveImageId
+            LEFT JOIN food_item_images fii ON fi.Source = {(byte)FoodSource.Official} AND fii.Id = fi.ActiveImageId
             WHERE {whereClause}
             ORDER BY MATCH(fi.NameVi, fi.NameEn) AGAINST (@searchTerm2 IN BOOLEAN MODE) DESC
             LIMIT @limit OFFSET @offset";
@@ -245,7 +248,10 @@ public class FoodService : IFoodService
                     ? null
                     : reader.GetString(reader.GetOrdinal("ImageStorageProvider"));
                 
-                string? resolvedImageUrl = source == (byte)FoodSource.Community
+                bool useThumbnail = source == (byte)FoodSource.Community 
+                                 || source == (byte)FoodSource.BarcodeCommunity 
+                                 || source == (byte)FoodSource.OpenFoodFacts;
+                string? resolvedImageUrl = useThumbnail
                     ? thumbnailUrl
                     : (imageStoragePath != null ? _storage.BuildUrl(imageStoragePath) : null);
 
