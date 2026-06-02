@@ -76,4 +76,22 @@ public class AdminUserService : IAdminUserService
         await _dbContext.SaveChangesAsync();
         return true;
     }
+
+    public async Task<AdminUserStatsDto> GetUserStatsAsync()
+    {
+        var totalUsers = await _dbContext.Users.CountAsync();
+        var lockedUsers = await _dbContext.Users.CountAsync(u => u.Status == 0);
+        
+        // TODO: Calculate VIP users properly when VIP system is implemented
+        var vipUsers = 0;
+        var freeUsers = totalUsers - vipUsers - lockedUsers;
+
+        return new AdminUserStatsDto
+        {
+            Total = totalUsers,
+            Vip = vipUsers,
+            Free = freeUsers,
+            Locked = lockedUsers
+        };
+    }
 }

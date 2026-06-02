@@ -10,4 +10,5 @@ public interface IAdminUserService
     Task<IEnumerable<AdminUserDto>> GetAllUsersAsync(int page, int pageSize, string? search);
     Task<AdminUserDto?> GetUserByIdAsync(Guid id);
     Task<bool> ToggleUserLockAsync(Guid id);
+    Task<AdminUserStatsDto> GetUserStatsAsync();
 }

@@ -90,8 +90,11 @@ builder.Services.AddScoped<IHealthConnectionService, HealthConnectionService>();
 builder.Services.AddHostedService<StreakEngineJob>();
 
 // ===== ADMIN SERVICES =====
-builder.Services.AddScoped<IAdminFoodService, AdminFoodService>();
+builder.Services.AddScoped<nutrition_app_backend.Services.Admin.FoodManagement.IAdminFoodService, nutrition_app_backend.Services.Admin.FoodManagement.AdminFoodService>();
 builder.Services.AddScoped<IAdminCompositeService, AdminCompositeService>();
+builder.Services.AddScoped<nutrition_app_backend.Services.Admin.IAdminDashboardService, nutrition_app_backend.Services.Admin.AdminDashboardService>();
+builder.Services.AddScoped<nutrition_app_backend.Services.Admin.IAdminUserService, nutrition_app_backend.Services.Admin.AdminUserService>();
+builder.Services.AddScoped<nutrition_app_backend.Services.Admin.IAdminExerciseService, nutrition_app_backend.Services.Admin.AdminExerciseService>();
 
 // ===== OPEN FOOD FACTS =====
 builder.Services.AddHttpClient("OpenFoodFacts", client =>

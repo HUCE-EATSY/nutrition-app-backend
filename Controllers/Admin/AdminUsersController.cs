@@ -36,4 +36,11 @@ public class AdminUsersController : ControllerBase
         var result = await _userService.ToggleUserLockAsync(id);
         return Ok(new { success = true });
     }
+
+    [HttpGet("stats")]
+    public async Task<IActionResult> GetStats()
+    {
+        var stats = await _userService.GetUserStatsAsync();
+        return Ok(new { success = true, data = stats });
+    }
 }
