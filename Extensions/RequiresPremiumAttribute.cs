@@ -1,41 +1,47 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using nutrition_app_backend.Data;
 using System;
 using System.Security.Claims;
 using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace nutrition_app_backend.Extensions
 {
+    /// <summary>
+    /// Attribute middleware kiểm tra user có gói Premium còn hạn.
+    /// Cho phép đi tiếp nếu Status IN (Active=0, Trial=1) và CurrentPeriodEnd > NOW().
+    /// Graceful downgrade: giữ nguyên quyền đến hết current_period_end dù webhook báo huỷ.
+    /// Trả 403 nếu hết hạn hoặc chưa có Premium.
+    /// </summary>
     public class RequiresPremiumAttribute : ActionFilterAttribute
     {
         public override async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
         {
-            var userIdString = context.HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out var userId))
+            string? userIdString = context.HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out Guid userId))
             {
                 context.Result = new UnauthorizedResult();
                 return;
             }
 
-            var dbContext = context.HttpContext.RequestServices.GetService<WaoDbContext>();
+            WaoDbContext? dbContext = context.HttpContext.RequestServices.GetService<WaoDbContext>();
             if (dbContext == null)
             {
                 context.Result = new StatusCodeResult(500);
                 return;
             }
 
-            var now = DateTime.UtcNow;
-            var hasPremium = await dbContext.Subscriptions
-                .AnyAsync(s => s.UserId == userId 
-                            && (s.Status == 0 || s.Status == 1) 
+            DateTime now = DateTime.UtcNow;
+            bool hasPremium = await dbContext.Subscriptions
+                .AnyAsync(s => s.UserId == userId
+                            && (s.Status == 0 || s.Status == 1)
                             && s.CurrentPeriodEnd > now);
 
             if (!hasPremium)
             {
-                var problemDetails = new ProblemDetails
+                ProblemDetails problemDetails = new ProblemDetails
                 {
                     Status = 403,
                     Title = "Premium Required",

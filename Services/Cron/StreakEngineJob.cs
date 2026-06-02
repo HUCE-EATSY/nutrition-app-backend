@@ -77,15 +77,19 @@ namespace nutrition_app_backend.Services.Cron
             {
                 WaoDbContext context = scope.ServiceProvider.GetRequiredService<WaoDbContext>();
 
-                DateTime yesterday = DateTime.UtcNow.AddHours(7).Date.AddDays(-1);
-                DateTime yesterdayStart = yesterday;
-                DateTime yesterdayEnd = yesterday.AddDays(1);
+                                TimeZoneInfo vietnamTz = TimeZoneInfo.FindSystemTimeZoneById(
+                    OperatingSystem.IsWindows() ? "SE Asia Standard Time" : "Asia/Ho_Chi_Minh");
+                DateTime todayVn = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vietnamTz).Date;
+                DateTime yesterdayVn = todayVn.AddDays(-1);
+
+                DateTime yesterdayStartUtc = TimeZoneInfo.ConvertTimeToUtc(yesterdayVn, vietnamTz);
+                DateTime yesterdayEndUtc = TimeZoneInfo.ConvertTimeToUtc(todayVn, vietnamTz);
 
                 List<UserStreak> streaks = await context.UserStreaks.Include(s => s.User).ThenInclude(u => u.Goals).ToListAsync(stoppingToken);
 
                 foreach (UserStreak streak in streaks)
                 {
-                    if (streak.LastLogDate.HasValue && streak.LastLogDate.Value.AddHours(7).Date == DateTime.UtcNow.AddHours(7).Date)
+                    if (streak.LastLogDate.HasValue && TimeZoneInfo.ConvertTimeFromUtc(streak.LastLogDate.Value, vietnamTz).Date == todayVn)
                     {
                         continue; 
                     }
@@ -96,7 +100,7 @@ namespace nutrition_app_backend.Services.Cron
                     decimal targetKcal = bmr * 0.5m;
 
                     decimal totalCals = await context.FoodLogs
-                        .Where(f => f.UserId == streak.UserId && f.LogDate >= yesterdayStart && f.LogDate < yesterdayEnd)
+                        .Where(f => f.UserId == streak.UserId && f.LogDate >= yesterdayStartUtc && f.LogDate < yesterdayEndUtc)
                         .SumAsync(f => f.CaloriesKcal, stoppingToken);
 
                     if (totalCals >= targetKcal)
@@ -111,7 +115,7 @@ namespace nutrition_app_backend.Services.Cron
                     else
                     {
                         bool alreadyFrozen = await context.StreakFreezeTransactions
-                            .AnyAsync(f => f.UserId == streak.UserId && f.FreezeDate.Date == yesterday, stoppingToken);
+                            .AnyAsync(f => f.UserId == streak.UserId && f.FreezeDate.Date == yesterdayVn, stoppingToken);
 
                         if (!alreadyFrozen && streak.FreezeCount > 0)
                         {
@@ -119,7 +123,7 @@ namespace nutrition_app_backend.Services.Cron
                             StreakFreezeTransaction trans = new StreakFreezeTransaction
                             {
                                 UserId = streak.UserId,
-                                FreezeDate = yesterday,
+                                FreezeDate = yesterdayVn,
                                 Source = 1 // Auto
                             };
                             context.StreakFreezeTransactions.Add(trans);

@@ -30,19 +30,52 @@ namespace nutrition_app_backend.Controllers
             _configuration = configuration;
         }
 
+        /// <summary>
+        /// GET /api/Subscription/plans
+        /// Trả về danh sách tất cả các gói cước (trừ FREE) để hiển thị trên UI.
+        /// </summary>
+        [HttpGet("plans")]
+        public async Task<ActionResult<ApiResponse<object>>> GetSubscriptionPlans()
+        {
+            List<SubscriptionPlan> plans = await _context.SubscriptionPlans
+                .Where(p => p.Code != "FREE")
+                .OrderBy(p => p.Price)
+                .ToListAsync();
+
+            List<object> result = plans.Select(p => (object)new
+            {
+                id = p.Id,
+                code = p.Code,
+                name = p.Name,
+                price = p.Price,
+                durationDays = p.DurationDays
+            }).ToList();
+
+            return Ok(ApiResponse<object>.Success(result, "Lấy danh sách gói cước thành công"));
+        }
+
+        /// <summary>
+        /// GET /api/Subscription/me
+        /// Trả về trạng thái gói cước hiện tại của user.
+        /// Tuyệt đối không lỗi 404. Nếu chưa mua, trả Free.
+        /// </summary>
         [HttpGet("me")]
         [Authorize]
         public async Task<ActionResult<ApiResponse<object>>> GetMySubscription()
         {
             Guid userId = User.GetUserId();
 
+            // Chỉ lấy subscription Active (0) hoặc Trial (1) còn hạn
+            // Loại trừ Pending (4), Cancelled (2), Expired (3)
             Subscription? subscription = await _context.Subscriptions
                 .Include(s => s.Plan)
-                .Where(s => s.UserId == userId && (s.Status == 0 || s.Status == 1))
+                .Where(s => s.UserId == userId
+                         && (s.Status == 0 || s.Status == 1)
+                         && s.CurrentPeriodEnd > DateTime.UtcNow)
                 .OrderByDescending(s => s.CurrentPeriodEnd)
                 .FirstOrDefaultAsync();
 
-            if (subscription == null || subscription.CurrentPeriodEnd <= DateTime.UtcNow)
+            if (subscription == null)
             {
                 object freePlan = new
                 {
@@ -69,6 +102,10 @@ namespace nutrition_app_backend.Controllers
             return Ok(ApiResponse<object>.Success(premiumPlan, "Lấy thông tin gói cước thành công"));
         }
 
+        /// <summary>
+        /// POST /api/Subscription/vietqr/create-order
+        /// Tạo đơn hàng VietQR. Sinh orderId duy nhất, tạo URL ảnh QR NAPAS, lưu subscription Pending.
+        /// </summary>
         [HttpPost("vietqr/create-order")]
         [Authorize]
         public async Task<ActionResult<ApiResponse<object>>> CreateVietQrOrder([FromBody] CreateOrderRequest request)
@@ -122,6 +159,10 @@ namespace nutrition_app_backend.Controllers
             return Ok(ApiResponse<object>.Success(result, "Tạo đơn hàng VietQR thành công"));
         }
 
+        /// <summary>
+        /// GET /api/Subscription/vietqr/{orderId}/status
+        /// Polling trạng thái đơn hàng. Frontend gọi mỗi 3 giây.
+        /// </summary>
         [HttpGet("vietqr/{orderId}/status")]
         [Authorize]
         public async Task<ActionResult<ApiResponse<object>>> GetOrderStatus(string orderId)
@@ -147,16 +188,22 @@ namespace nutrition_app_backend.Controllers
             return Ok(ApiResponse<object>.Success(new { status = statusStr }, "Lấy trạng thái đơn hàng thành công"));
         }
 
+        /// <summary>
+        /// POST /api/Subscription/vietqr/callback
+        /// Webhook Callback từ cổng thanh toán (PayOS/SePay cho Live, nội bộ cho Mock).
+        /// Xác thực chữ ký HMAC-SHA256 ở chế độ Live.
+        /// Lưu event vào subscription_events, cập nhật subscription sang Active.
+        /// </summary>
         [HttpPost("vietqr/callback")]
         public async Task<IActionResult> VietQrCallback()
         {
-            string requestBody = "";
+            string requestBody = string.Empty;
             using (StreamReader reader = new StreamReader(Request.Body))
             {
                 requestBody = await reader.ReadToEndAsync();
             }
 
-            string orderId = "";
+            string orderId = string.Empty;
             bool isMock = (_configuration["PaymentGateway:Mode"] ?? "Mock") == "Mock";
 
             try
@@ -167,13 +214,15 @@ namespace nutrition_app_backend.Controllers
 
                     if (isMock)
                     {
+                        // Chế độ Mock: đọc trực tiếp orderId từ payload
                         if (root.TryGetProperty("orderId", out JsonElement orderIdProp))
                         {
-                            orderId = orderIdProp.GetString() ?? "";
+                            orderId = orderIdProp.GetString() ?? string.Empty;
                         }
-                        else if (root.TryGetProperty("data", out JsonElement dataEl) && dataEl.TryGetProperty("description", out JsonElement descEl))
+                        else if (root.TryGetProperty("data", out JsonElement dataEl)
+                              && dataEl.TryGetProperty("description", out JsonElement descEl))
                         {
-                            string desc = descEl.GetString() ?? "";
+                            string desc = descEl.GetString() ?? string.Empty;
                             int idx = desc.IndexOf("WAOPREM");
                             if (idx >= 0 && desc.Length >= idx + 17)
                             {
@@ -183,13 +232,14 @@ namespace nutrition_app_backend.Controllers
                     }
                     else
                     {
+                        // Chế độ Live: xác thực chữ ký HMAC-SHA256
                         if (!root.TryGetProperty("data", out JsonElement dataEl) || !root.TryGetProperty("signature", out JsonElement sigEl))
                         {
                             return BadRequest("Invalid payload structure for PayOS");
                         }
 
-                        string receivedSignature = sigEl.GetString() ?? "";
-                        string secretKey = _configuration["PaymentGateway:SecretKey"] ?? "";
+                        string receivedSignature = sigEl.GetString() ?? string.Empty;
+                        string secretKey = _configuration["PaymentGateway:SecretKey"] ?? string.Empty;
 
                         string dataSignString = BuildPayOsSignString(dataEl);
                         string calculatedSignature = ComputeHmacSha256(dataSignString, secretKey);
@@ -201,7 +251,7 @@ namespace nutrition_app_backend.Controllers
 
                         if (dataEl.TryGetProperty("description", out JsonElement descEl))
                         {
-                            string desc = descEl.GetString() ?? "";
+                            string desc = descEl.GetString() ?? string.Empty;
                             int idx = desc.IndexOf("WAOPREM");
                             if (idx >= 0 && desc.Length >= idx + 17)
                             {
@@ -210,7 +260,7 @@ namespace nutrition_app_backend.Controllers
                         }
                         else if (dataEl.TryGetProperty("orderCode", out JsonElement orderCodeEl))
                         {
-                            string orderCodeStr = orderCodeEl.ValueKind == JsonValueKind.Number ? orderCodeEl.GetRawText() : orderCodeEl.GetString() ?? "";
+                            string orderCodeStr = orderCodeEl.ValueKind == JsonValueKind.Number ? orderCodeEl.GetRawText() : orderCodeEl.GetString() ?? string.Empty;
                             orderId = orderCodeStr;
                         }
                     }
@@ -235,6 +285,7 @@ namespace nutrition_app_backend.Controllers
                 return NotFound("Subscription order not found");
             }
 
+            // Lưu vết event vào subscription_events (Append-only)
             SubscriptionEvent subEvent = new SubscriptionEvent
             {
                 Id = Guid.NewGuid(),
@@ -247,6 +298,7 @@ namespace nutrition_app_backend.Controllers
 
             _context.SubscriptionEvents.Add(subEvent);
 
+            // Cập nhật subscription: Active + cộng thêm ngày theo plan
             subscription.Status = 0; // 0 = Active
             subscription.CurrentPeriodEnd = DateTime.UtcNow.AddDays(subscription.Plan.DurationDays);
             subscription.UpdatedAt = DateTime.UtcNow;
@@ -306,11 +358,11 @@ namespace nutrition_app_backend.Controllers
             {
                 string key = prop.Name;
                 JsonElement val = prop.Value;
-                string valueStr = "";
+                string valueStr = string.Empty;
 
                 if (val.ValueKind == JsonValueKind.String)
                 {
-                    valueStr = val.GetString() ?? "";
+                    valueStr = val.GetString() ?? string.Empty;
                 }
                 else if (val.ValueKind == JsonValueKind.Number)
                 {
@@ -322,7 +374,7 @@ namespace nutrition_app_backend.Controllers
                 }
                 else if (val.ValueKind == JsonValueKind.Null)
                 {
-                    valueStr = "";
+                    valueStr = string.Empty;
                 }
                 else
                 {
