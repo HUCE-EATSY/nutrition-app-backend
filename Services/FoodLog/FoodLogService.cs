@@ -69,6 +69,9 @@ public class FoodLogService : IFoodLogService
         _db.FoodLogs.Add(log);
         await _db.SaveChangesAsync();
 
+        await CheckAndUpdateStreakAsync(userId, log.LogDate);
+        await _db.SaveChangesAsync();
+
         return _mapper.Map<FoodLogResponse>(log);
     }
 
@@ -108,6 +111,9 @@ public class FoodLogService : IFoodLogService
 
         await _db.SaveChangesAsync();
 
+        await CheckAndUpdateStreakAsync(userId, log.LogDate);
+        await _db.SaveChangesAsync();
+
         return _mapper.Map<FoodLogResponse>(log);
     }
 
@@ -125,6 +131,9 @@ public class FoodLogService : IFoodLogService
             throw new ForbiddenException("Bạn không có quyền xóa log này.");
 
         _db.FoodLogs.Remove(log);
+        await _db.SaveChangesAsync();
+
+        await CheckAndUpdateStreakAsync(userId, log.LogDate);
         await _db.SaveChangesAsync();
     }
 
@@ -292,5 +301,57 @@ public class FoodLogService : IFoodLogService
         }
 
         return result;
+    }
+
+    private async Task CheckAndUpdateStreakAsync(Guid userId, DateTime logDate)
+    {
+        DateTime today = DateTime.UtcNow.AddHours(7).Date;
+        if (logDate.Date != today)
+        {
+            return;
+        }
+
+        Models.Users.UserGoal? activeGoal = await _db.UserGoals
+            .FirstOrDefaultAsync(g => g.UserId == userId && g.IsActive);
+        decimal targetKcal = activeGoal?.TargetCalories ?? 1500m;
+
+        DateTime start = today;
+        DateTime end = today.AddDays(1);
+        decimal totalCalories = await _db.FoodLogs
+            .Where(f => f.UserId == userId && f.LogDate >= start && f.LogDate < end)
+            .SumAsync(f => f.CaloriesKcal);
+
+        Models.Users.UserStreak? streak = await _db.UserStreaks.FirstOrDefaultAsync(s => s.UserId == userId);
+        if (streak == null)
+        {
+            streak = new Models.Users.UserStreak { UserId = userId };
+            _db.UserStreaks.Add(streak);
+        }
+
+        bool isLoggedToday = streak.LastLogDate.HasValue && streak.LastLogDate.Value.AddHours(7).Date == today;
+
+        if (totalCalories >= targetKcal)
+        {
+            if (!isLoggedToday)
+            {
+                streak.CurrentStreak += 1;
+                if (streak.CurrentStreak > streak.LongestStreak)
+                {
+                    streak.LongestStreak = streak.CurrentStreak;
+                }
+                streak.LastLogDate = DateTime.UtcNow;
+            }
+        }
+        else
+        {
+            if (isLoggedToday)
+            {
+                if (streak.CurrentStreak > 0)
+                {
+                    streak.CurrentStreak -= 1;
+                }
+                streak.LastLogDate = null;
+            }
+        }
     }
 }

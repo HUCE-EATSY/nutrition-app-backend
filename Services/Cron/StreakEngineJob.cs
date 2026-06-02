@@ -77,7 +77,7 @@ namespace nutrition_app_backend.Services.Cron
             {
                 WaoDbContext context = scope.ServiceProvider.GetRequiredService<WaoDbContext>();
 
-                DateTime yesterday = DateTime.UtcNow.Date.AddDays(-1);
+                DateTime yesterday = DateTime.UtcNow.AddHours(7).Date.AddDays(-1);
                 DateTime yesterdayStart = yesterday;
                 DateTime yesterdayEnd = yesterday.AddDays(1);
 
@@ -85,7 +85,7 @@ namespace nutrition_app_backend.Services.Cron
 
                 foreach (UserStreak streak in streaks)
                 {
-                    if (streak.LastLogDate.HasValue && streak.LastLogDate.Value.Date == DateTime.UtcNow.Date)
+                    if (streak.LastLogDate.HasValue && streak.LastLogDate.Value.AddHours(7).Date == DateTime.UtcNow.AddHours(7).Date)
                     {
                         continue; 
                     }

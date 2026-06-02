@@ -46,7 +46,7 @@ namespace nutrition_app_backend.Controllers
                 await _context.SaveChangesAsync();
             }
 
-            DateTime todayDt = DateTime.UtcNow.Date;
+            DateTime todayDt = DateTime.UtcNow.AddHours(7).Date;
             
             bool[] weeklyProgress = new bool[7];
             int dayOfWeek = (int)todayDt.DayOfWeek;
@@ -93,7 +93,7 @@ namespace nutrition_app_backend.Controllers
                 longestStreak = streak.LongestStreak,
                 freezeCount = streak.FreezeCount,
                 weeklyProgress = weeklyProgress,
-                isLoggedToday = streak.LastLogDate.HasValue && streak.LastLogDate.Value.Date == DateTime.UtcNow.Date
+                isLoggedToday = streak.LastLogDate.HasValue && streak.LastLogDate.Value.AddHours(7).Date == todayDt
             };
 
             return Ok(ApiResponse<object>.Success(result, "Lấy thông tin streak thành công"));
@@ -110,7 +110,7 @@ namespace nutrition_app_backend.Controllers
                 return BadRequest(ApiResponse<object>.Fail("Không đủ thẻ đóng băng"));
             }
 
-            DateTime yesterdayDt = DateTime.UtcNow.Date.AddDays(-1);
+            DateTime yesterdayDt = DateTime.UtcNow.AddHours(7).Date.AddDays(-1);
             DateTime yesterdayEndDt = yesterdayDt.AddDays(1);
 
             bool alreadyFrozen = await _context.StreakFreezeTransactions
@@ -212,7 +212,7 @@ namespace nutrition_app_backend.Controllers
             decimal bmr = activeGoal?.BmrKcal ?? 1500m;
             decimal targetKcal = bmr * 0.5m;
 
-            DateTime yesterday = DateTime.UtcNow.Date.AddDays(-1);
+            DateTime yesterday = DateTime.UtcNow.AddHours(7).Date.AddDays(-1);
             
             List<FoodLog> existingLogs = await _context.FoodLogs
                 .Where(f => f.UserId == userId && f.LogDate >= yesterday && f.LogDate < yesterday.AddDays(1))
@@ -237,7 +237,7 @@ namespace nutrition_app_backend.Controllers
             // Instant Evaluation
             if (log.CaloriesKcal >= targetKcal)
             {
-                if (!streak.LastLogDate.HasValue || streak.LastLogDate.Value.Date < DateTime.UtcNow.Date)
+                if (!streak.LastLogDate.HasValue || streak.LastLogDate.Value.AddHours(7).Date < DateTime.UtcNow.AddHours(7).Date)
                 {
                     streak.CurrentStreak += 1;
                     if (streak.CurrentStreak > streak.LongestStreak)

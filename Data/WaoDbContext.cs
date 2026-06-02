@@ -220,7 +220,7 @@ public class WaoDbContext : DbContext
             entity.Property(e => e.Id).HasColumnType("CHAR(36)");
             entity.Property(e => e.UserId).HasColumnType("CHAR(36)");
             
-            entity.HasIndex(e => new { e.UserId, e.Status }).HasDatabaseName("idx_subscription_user_status");
+            entity.HasIndex(e => new { e.UserId, e.Status }).HasDatabaseName("idx_sub_user_status");
 
             entity.HasOne(d => d.User)
                   .WithMany(p => p.Subscriptions)
@@ -239,6 +239,8 @@ public class WaoDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id).HasColumnType("CHAR(36)");
             entity.Property(e => e.SubscriptionId).HasColumnType("CHAR(36)");
+
+            entity.HasIndex(e => new { e.SubscriptionId, e.ReceivedAt }).HasDatabaseName("idx_sub_event");
 
             entity.HasOne(d => d.Subscription)
                   .WithMany()
