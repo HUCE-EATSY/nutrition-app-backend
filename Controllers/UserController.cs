@@ -82,4 +82,16 @@ public class UserController : ControllerBase
 
         return NoContent();
     }
+
+    /// <summary>
+    /// Tính toán BMR và TDEE dựa trên thông tin profile của user
+    /// </summary>
+    [HttpGet("calories")]
+    public async Task<ActionResult<ApiResponse<CalorieCalculationResponse>>> CalculateCalories()
+    {
+        Guid userId = User.GetUserId();
+        var result = await _userService.CalculateCaloriesAsync(userId);
+
+        return Ok(ApiResponse<CalorieCalculationResponse>.Success(result, "Tính toán calo thành công"));
+    }
 }

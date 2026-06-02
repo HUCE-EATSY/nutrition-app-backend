@@ -10,4 +10,5 @@ public interface IUserService
     Task<GetUserInfoResponse> GetUserInfoAsync(Guid userId);
     Task<string> UploadAvatarAsync(Guid userId, IFormFile file);
     Task DeleteAccountAsync(Guid userId);
+    Task<CalorieCalculationResponse> CalculateCaloriesAsync(Guid userId);
 }

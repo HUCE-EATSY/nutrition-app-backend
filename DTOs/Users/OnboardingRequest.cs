@@ -18,8 +18,7 @@ public record OnboardingRequest(
     [Range(20, 300)]
     decimal GoalWeightKg,
     
-    [Range(1, 5)]
-    byte ActivityLevel,
+    ActivityLevel ActivityLevel,
 
     [Range(0.0, 2.0)]
     decimal WeeklyGoalKg,
