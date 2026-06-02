@@ -1,6 +1,11 @@
 using Microsoft.EntityFrameworkCore;
 using nutrition_app_backend.Data;
 using nutrition_app_backend.Models.Users;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace nutrition_app_backend.Services.Streak;
 
@@ -16,17 +21,17 @@ public class StreakService : IStreakService
     public async Task ProcessStreaksAsync(CancellationToken cancellationToken = default)
     {
         // Cron runs at 23:59 VN time — check TODAY's logs in VN time
-        var vietnamTz = TimeZoneInfo.FindSystemTimeZoneById(
+        TimeZoneInfo vietnamTz = TimeZoneInfo.FindSystemTimeZoneById(
             OperatingSystem.IsWindows() ? "SE Asia Standard Time" : "Asia/Ho_Chi_Minh");
-        var todayVn = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vietnamTz).Date;
-        var todayStart = todayVn;
-        var todayEnd = todayVn.AddDays(1);
+        DateTime todayVn = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vietnamTz).Date;
+        DateTime todayStart = todayVn;
+        DateTime todayEnd = todayVn.AddDays(1);
 
-        var streaks = await _context.UserStreaks
+        List<UserStreak> streaks = await _context.UserStreaks
             .Include(s => s.User)
             .ToListAsync(cancellationToken);
 
-        foreach (var streak in streaks)
+        foreach (UserStreak streak in streaks)
         {
             // Idempotency: skip if already processed today (VN date)
             if (streak.LastLogDate.HasValue &&
@@ -36,11 +41,11 @@ public class StreakService : IStreakService
             }
 
             // Rule: Streak chỉ được tính khi log đủ ngưỡng 50% BMR
-            var activeGoal = await _context.UserGoals
+            UserGoal? activeGoal = await _context.UserGoals
                 .FirstOrDefaultAsync(g => g.UserId == streak.UserId && g.IsActive, cancellationToken);
             decimal bmrThreshold = (activeGoal?.BmrKcal ?? 1600m) * 0.5m;
 
-            var todayCalories = await _context.FoodLogs
+            decimal todayCalories = await _context.FoodLogs
                 .Where(f => f.UserId == streak.UserId && f.LogDate >= todayStart && f.LogDate < todayEnd)
                 .SumAsync(f => (decimal?)f.CaloriesKcal, cancellationToken) ?? 0m;
 
@@ -57,14 +62,14 @@ public class StreakService : IStreakService
             else
             {
                 // Không ghi ăn → kiểm tra freeze (tối đa 2 khiên/tuần)
-                var alreadyFrozen = await _context.StreakFreezeTransactions
+                bool alreadyFrozen = await _context.StreakFreezeTransactions
                     .AnyAsync(f => f.UserId == streak.UserId && f.FreezeDate.Date == todayVn, cancellationToken);
 
                 if (!alreadyFrozen && streak.FreezeCount > 0)
                 {
                     // Kiểm tra: tuần này đã dùng bao nhiêu khiên? (tối đa 2/tuần)
-                    var startOfWeekVn = todayVn.AddDays(-(todayVn.DayOfWeek == DayOfWeek.Sunday ? 6 : (int)todayVn.DayOfWeek - 1));
-                    var freezesThisWeek = await _context.StreakFreezeTransactions
+                    DateTime startOfWeekVn = todayVn.AddDays(-(todayVn.DayOfWeek == DayOfWeek.Sunday ? 6 : (int)todayVn.DayOfWeek - 1));
+                    int freezesThisWeek = await _context.StreakFreezeTransactions
                         .CountAsync(f => f.UserId == streak.UserId && f.FreezeDate >= startOfWeekVn && f.FreezeDate <= todayVn,
                             cancellationToken);
 
@@ -72,7 +77,7 @@ public class StreakService : IStreakService
                     {
                         // Auto-dùng freeze (source=1)
                         streak.FreezeCount -= 1;
-                        var trans = new StreakFreezeTransaction
+                        StreakFreezeTransaction trans = new StreakFreezeTransaction
                         {
                             Id = Guid.NewGuid(),
                             UserId = streak.UserId,
@@ -101,7 +106,7 @@ public class StreakService : IStreakService
 
     public async Task<List<StreakLeaderboardDto>> GetLeaderboardAsync(int top = 50)
     {
-        var streaks = await _context.UserStreaks
+        List<UserStreak> streaks = await _context.UserStreaks
             .Include(s => s.User)
             .ThenInclude(u => u.AuthProviders)
             .OrderByDescending(s => s.CurrentStreak)
@@ -120,7 +125,7 @@ public class StreakService : IStreakService
 
     public async Task AdjustStreakForTestAsync(Guid userId, int streakToAdd, int freezeToAdd)
     {
-        var streak = await _context.UserStreaks.FirstOrDefaultAsync(s => s.UserId == userId);
+        UserStreak? streak = await _context.UserStreaks.FirstOrDefaultAsync(s => s.UserId == userId);
         if (streak == null)
         {
             streak = new UserStreak

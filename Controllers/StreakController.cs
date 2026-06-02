@@ -5,8 +5,11 @@ using nutrition_app_backend.Data;
 using nutrition_app_backend.DTOs;
 using nutrition_app_backend.Extensions;
 using nutrition_app_backend.Models.Users;
+using nutrition_app_backend.Models.Foods;
+using nutrition_app_backend.Models.Diaries;
 using nutrition_app_backend.Services.Streak;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
