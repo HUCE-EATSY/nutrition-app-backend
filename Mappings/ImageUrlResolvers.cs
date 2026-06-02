@@ -24,13 +24,15 @@ public class FoodItemImageUrlResolver : IValueResolver<FoodItem, FoodDetailRespo
 
     public string? Resolve(FoodItem src, FoodDetailResponse dest, string? destMember, ResolutionContext context)
     {
-        if (src.Source == FoodSource.Community)
-            return src.ThumbnailUrl; // Community: full URL đã lưu sẵn
+        if (src.Source == FoodSource.Community 
+            || src.Source == FoodSource.BarcodeCommunity 
+            || src.Source == FoodSource.OpenFoodFacts)
+            return src.ThumbnailUrl;
 
         if (src.ActiveImage == null)
-            return src.ThumbnailUrl; // Official có thể có url ảnh cào sẵn trong ThumbnailUrl
+            return null;
 
-        return _storage.BuildUrl(src.ActiveImage.StoragePath); // Official: build URL từ public_id
+        return _storage.BuildUrl(src.ActiveImage.StoragePath);
     }
 }
 
@@ -48,13 +50,16 @@ public class FoodLogImageUrlResolver : IValueResolver<FoodLog, FoodLogResponse, 
 
     public string? Resolve(FoodLog src, FoodLogResponse dest, string? destMember, ResolutionContext context)
     {
-        if (src.FoodItem.Source == FoodSource.Community || src.FoodItem.Source == FoodSource.OpenFoodFacts)
-            return src.FoodItem.ThumbnailUrl;
+        var food = src.FoodItem;
+        if (food.Source == FoodSource.Community 
+            || food.Source == FoodSource.BarcodeCommunity 
+            || food.Source == FoodSource.OpenFoodFacts)
+            return food.ThumbnailUrl;
 
-        if (src.FoodItem.ActiveImage == null)
-            return src.FoodItem.ThumbnailUrl; // Fallback cho OFF và official có ThumbnailUrl
+        if (food.ActiveImage == null)
+            return null;
 
-        return _storage.BuildUrl(src.FoodItem.ActiveImage.StoragePath);
+        return _storage.BuildUrl(food.ActiveImage.StoragePath);
     }
 }
 
@@ -72,12 +77,15 @@ public class FoodComponentImageUrlResolver : IValueResolver<FoodItemComponent, F
 
     public string? Resolve(FoodItemComponent src, FoodComponentResponse dest, string? destMember, ResolutionContext context)
     {
-        if (src.ChildFood.Source == FoodSource.Community)
-            return src.ChildFood.ThumbnailUrl;
+        var child = src.ChildFood;
+        if (child.Source == FoodSource.Community 
+            || child.Source == FoodSource.BarcodeCommunity 
+            || child.Source == FoodSource.OpenFoodFacts)
+            return child.ThumbnailUrl;
 
-        if (src.ChildFood.ActiveImage == null)
-            return src.ChildFood.ThumbnailUrl; // Fallback nếu không có ActiveImage (chẳng hạn ảnh cào hoặc official link sẵn)
+        if (child.ActiveImage == null)
+            return null;
 
-        return _storage.BuildUrl(src.ChildFood.ActiveImage.StoragePath);
+        return _storage.BuildUrl(child.ActiveImage.StoragePath);
     }
 }
