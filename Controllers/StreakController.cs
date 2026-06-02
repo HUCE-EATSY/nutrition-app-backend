@@ -17,7 +17,6 @@ namespace nutrition_app_backend.Controllers
 {
     [ApiController]
     [Route("api/streaks")]
-    [Route("api/streak")]
     [Authorize]
     public class StreakController : ControllerBase
     {
@@ -231,10 +230,16 @@ namespace nutrition_app_backend.Controllers
             decimal bmr = activeGoal?.BmrKcal ?? 1500m;
             decimal targetKcal = bmr * 0.5m;
 
-            DateTime yesterday = DateTime.UtcNow.AddHours(7).Date.AddDays(-1);
+            TimeZoneInfo vietnamTz = TimeZoneInfo.FindSystemTimeZoneById(
+                OperatingSystem.IsWindows() ? "SE Asia Standard Time" : "Asia/Ho_Chi_Minh");
+            DateTime todayVn = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vietnamTz).Date;
+            DateTime yesterdayVn = todayVn.AddDays(-1);
             
+            DateTime yesterdayStartUtc = TimeZoneInfo.ConvertTimeToUtc(yesterdayVn, vietnamTz);
+            DateTime yesterdayEndUtc = TimeZoneInfo.ConvertTimeToUtc(todayVn, vietnamTz);
+
             List<FoodLog> existingLogs = await _context.FoodLogs
-                .Where(f => f.UserId == userId && f.LogDate >= yesterday && f.LogDate < yesterday.AddDays(1))
+                .Where(f => f.UserId == userId && f.LogDate >= yesterdayStartUtc && f.LogDate < yesterdayEndUtc)
                 .ToListAsync();
             _context.FoodLogs.RemoveRange(existingLogs);
 
@@ -243,7 +248,7 @@ namespace nutrition_app_backend.Controllers
                 UserId = userId,
                 FoodItemId = foodItem.Id,
                 MealTypeId = 1, // Breakfast
-                LogDate = yesterday,
+                LogDate = yesterdayStartUtc, // Save as UTC midnight of yesterday local
                 QuantityG = (targetKcal / 500m) * 100m + 10m,
                 CaloriesKcal = targetKcal + 100m,
                 ProteinG = 30m,
@@ -253,17 +258,18 @@ namespace nutrition_app_backend.Controllers
 
             _context.FoodLogs.Add(log);
 
-            // Instant Evaluation
+            // Instant Evaluation for yesterday
             if (log.CaloriesKcal >= targetKcal)
             {
-                if (!streak.LastLogDate.HasValue || streak.LastLogDate.Value.AddHours(7).Date < DateTime.UtcNow.AddHours(7).Date)
+                bool isLoggedYesterday = streak.LastLogDate.HasValue && TimeZoneInfo.ConvertTimeFromUtc(streak.LastLogDate.Value, vietnamTz).Date >= yesterdayVn;
+                if (!isLoggedYesterday)
                 {
                     streak.CurrentStreak += 1;
                     if (streak.CurrentStreak > streak.LongestStreak)
                     {
                         streak.LongestStreak = streak.CurrentStreak;
                     }
-                    streak.LastLogDate = DateTime.UtcNow;
+                    streak.LastLogDate = yesterdayStartUtc; // Set LastLogDate to yesterday to allow logging today
                 }
             }
 

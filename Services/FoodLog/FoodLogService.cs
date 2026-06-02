@@ -305,20 +305,27 @@ public class FoodLogService : IFoodLogService
 
     private async Task CheckAndUpdateStreakAsync(Guid userId, DateTime logDate)
     {
-        DateTime today = DateTime.UtcNow.AddHours(7).Date;
-        if (logDate.Date != today)
+        TimeZoneInfo vietnamTz = TimeZoneInfo.FindSystemTimeZoneById(
+            OperatingSystem.IsWindows() ? "SE Asia Standard Time" : "Asia/Ho_Chi_Minh");
+        DateTime todayVn = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vietnamTz).Date;
+
+        if (logDate.Date != todayVn)
         {
             return;
         }
 
         Models.Users.UserGoal? activeGoal = await _db.UserGoals
             .FirstOrDefaultAsync(g => g.UserId == userId && g.IsActive);
-        decimal targetKcal = activeGoal?.TargetCalories ?? 1500m;
+        decimal bmrThreshold = (activeGoal?.BmrKcal ?? 1600m) * 0.5m;
 
-        DateTime start = today;
-        DateTime end = today.AddDays(1);
+        DateTime startLocal = todayVn;
+        DateTime endLocal = todayVn.AddDays(1);
+
+        DateTime startUtc = TimeZoneInfo.ConvertTimeToUtc(startLocal, vietnamTz);
+        DateTime endUtc = TimeZoneInfo.ConvertTimeToUtc(endLocal, vietnamTz);
+
         decimal totalCalories = await _db.FoodLogs
-            .Where(f => f.UserId == userId && f.LogDate >= start && f.LogDate < end)
+            .Where(f => f.UserId == userId && f.LogDate >= startUtc && f.LogDate < endUtc)
             .SumAsync(f => f.CaloriesKcal);
 
         Models.Users.UserStreak? streak = await _db.UserStreaks.FirstOrDefaultAsync(s => s.UserId == userId);
@@ -328,9 +335,9 @@ public class FoodLogService : IFoodLogService
             _db.UserStreaks.Add(streak);
         }
 
-        bool isLoggedToday = streak.LastLogDate.HasValue && streak.LastLogDate.Value.AddHours(7).Date == today;
+        bool isLoggedToday = streak.LastLogDate.HasValue && TimeZoneInfo.ConvertTimeFromUtc(streak.LastLogDate.Value, vietnamTz).Date == todayVn;
 
-        if (totalCalories >= targetKcal)
+        if (totalCalories >= bmrThreshold)
         {
             if (!isLoggedToday)
             {
