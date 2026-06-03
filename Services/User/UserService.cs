@@ -282,9 +282,7 @@ public class UserService : IUserService
     }
 
     /// <summary>
-    /// Xóa tài khoản user (soft delete).
-    /// - Đánh dấu DeletedAt trên bản ghi User.
-    /// - Thu hồi toàn bộ RefreshToken còn hiệu lực để ngăn đăng nhập lại.
+    /// Xóa tài khoản user (hard delete).
     /// </summary>
     public async Task DeleteAccountAsync(Guid userId)
     {
@@ -292,21 +290,7 @@ public class UserService : IUserService
         if (user == null)
             throw new NotFoundException("User not found.");
 
-        if (user.DeletedAt.HasValue)
-            throw new BusinessException("ACCOUNT_ALREADY_DELETED", "Tài khoản đã bị xóa trước đó.");
-
-        var now = DateTime.UtcNow;
-
-        // Soft delete user
-        user.DeletedAt = now;
-        user.UpdatedAt = now;
-
-        // Thu hồi tất cả refresh token còn hiệu lực
-        var activeTokens = _dbContext.RefreshTokens
-            .Where(t => t.UserId == userId && t.RevokedAt == null);
-        
-        foreach (var token in activeTokens)
-            token.RevokedAt = now;
+        _dbContext.Users.Remove(user);
 
         await _dbContext.SaveChangesAsync();
     }

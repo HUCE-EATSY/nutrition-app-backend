@@ -69,6 +69,9 @@ public class FoodLogService : IFoodLogService
         _db.FoodLogs.Add(log);
         await _db.SaveChangesAsync();
 
+        await CheckAndUpdateStreakAsync(userId, log.LogDate);
+        await _db.SaveChangesAsync();
+
         return _mapper.Map<FoodLogResponse>(log);
     }
 
@@ -108,6 +111,9 @@ public class FoodLogService : IFoodLogService
 
         await _db.SaveChangesAsync();
 
+        await CheckAndUpdateStreakAsync(userId, log.LogDate);
+        await _db.SaveChangesAsync();
+
         return _mapper.Map<FoodLogResponse>(log);
     }
 
@@ -125,6 +131,9 @@ public class FoodLogService : IFoodLogService
             throw new ForbiddenException("Bạn không có quyền xóa log này.");
 
         _db.FoodLogs.Remove(log);
+        await _db.SaveChangesAsync();
+
+        await CheckAndUpdateStreakAsync(userId, log.LogDate);
         await _db.SaveChangesAsync();
     }
 
@@ -292,5 +301,67 @@ public class FoodLogService : IFoodLogService
         }
 
         return result;
+    }
+
+    private async Task CheckAndUpdateStreakAsync(Guid userId, DateTime logDate)
+    {
+        TimeZoneInfo vietnamTz = TimeZoneInfo.FindSystemTimeZoneById(
+            OperatingSystem.IsWindows() ? "SE Asia Standard Time" : "Asia/Ho_Chi_Minh");
+        DateTime todayVn = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vietnamTz).Date;
+
+        DateTime utcLogDate = logDate.Kind == DateTimeKind.Utc ? logDate : DateTime.SpecifyKind(logDate, DateTimeKind.Utc);
+        DateTime logDateVn = TimeZoneInfo.ConvertTimeFromUtc(utcLogDate, vietnamTz).Date;
+
+        if (logDateVn != todayVn)
+        {
+            return;
+        }
+
+        Models.Users.UserGoal? activeGoal = await _db.UserGoals
+            .FirstOrDefaultAsync(g => g.UserId == userId && g.IsActive);
+        decimal bmrThreshold = (activeGoal?.BmrKcal ?? 1600m) * 0.5m;
+
+        DateTime startLocal = todayVn;
+        DateTime endLocal = todayVn.AddDays(1);
+
+        DateTime startUtc = TimeZoneInfo.ConvertTimeToUtc(startLocal, vietnamTz);
+        DateTime endUtc = TimeZoneInfo.ConvertTimeToUtc(endLocal, vietnamTz);
+
+        decimal totalCalories = await _db.FoodLogs
+            .Where(f => f.UserId == userId && f.LogDate >= startUtc && f.LogDate < endUtc)
+            .SumAsync(f => f.CaloriesKcal);
+
+        Models.Users.UserStreak? streak = await _db.UserStreaks.FirstOrDefaultAsync(s => s.UserId == userId);
+        if (streak == null)
+        {
+            streak = new Models.Users.UserStreak { UserId = userId };
+            _db.UserStreaks.Add(streak);
+        }
+
+        bool isLoggedToday = streak.LastLogDate.HasValue && TimeZoneInfo.ConvertTimeFromUtc(streak.LastLogDate.Value, vietnamTz).Date == todayVn;
+
+        if (totalCalories >= bmrThreshold)
+        {
+            if (!isLoggedToday)
+            {
+                streak.CurrentStreak += 1;
+                if (streak.CurrentStreak > streak.LongestStreak)
+                {
+                    streak.LongestStreak = streak.CurrentStreak;
+                }
+                streak.LastLogDate = DateTime.UtcNow;
+            }
+        }
+        else
+        {
+            if (isLoggedToday)
+            {
+                if (streak.CurrentStreak > 0)
+                {
+                    streak.CurrentStreak -= 1;
+                }
+                streak.LastLogDate = null;
+            }
+        }
     }
 }
