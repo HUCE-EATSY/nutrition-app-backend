@@ -43,6 +43,7 @@ public class AdminUserService : IAdminUserService
                 case "locked":
                     query = query.Where(u => u.Status == 0);
                     break;
+                case "premium":
                 case "vip":
                     query = query.Where(u => u.Subscriptions.Any(s => s.Status == 0 && s.CurrentPeriodEnd > DateTime.UtcNow));
                     break;
@@ -68,15 +69,15 @@ public class AdminUserService : IAdminUserService
                 CreatedAt = u.CreatedAt,
                 IsActive = u.Status == 1,
                 IsLocked = u.Status == 0,
-                VipPackageId = u.Subscriptions
+                PremiumPackageId = u.Subscriptions
                     .Where(s => s.Status == 0 && s.CurrentPeriodEnd > DateTime.UtcNow)
                     .Select(s => (int?)s.PlanId)
                     .FirstOrDefault(),
-                VipPackageName = u.Subscriptions
+                PremiumPackageName = u.Subscriptions
                     .Where(s => s.Status == 0 && s.CurrentPeriodEnd > DateTime.UtcNow)
                     .Select(s => s.Plan.Name)
                     .FirstOrDefault(),
-                VipExpiresAt = u.Subscriptions
+                PremiumExpiresAt = u.Subscriptions
                     .Where(s => s.Status == 0 && s.CurrentPeriodEnd > DateTime.UtcNow)
                     .Select(s => (DateTime?)s.CurrentPeriodEnd)
                     .FirstOrDefault()
@@ -115,9 +116,9 @@ public class AdminUserService : IAdminUserService
             CreatedAt = user.CreatedAt,
             IsActive = user.Status == 1,
             IsLocked = user.Status == 0,
-            VipPackageId = activeSubscription?.PlanId,
-            VipPackageName = activeSubscription?.Plan?.Name,
-            VipExpiresAt = activeSubscription?.CurrentPeriodEnd
+            PremiumPackageId = activeSubscription?.PlanId,
+            PremiumPackageName = activeSubscription?.Plan?.Name,
+            PremiumExpiresAt = activeSubscription?.CurrentPeriodEnd
         };
     }
 
@@ -148,9 +149,9 @@ public class AdminUserService : IAdminUserService
             CreatedAt = user.CreatedAt,
             IsActive = user.Status == 1,
             IsLocked = user.Status == 0,
-            VipPackageId = activeSubscription?.PlanId,
-            VipPackageName = activeSubscription?.Plan?.Name,
-            VipExpiresAt = activeSubscription?.CurrentPeriodEnd
+            PremiumPackageId = activeSubscription?.PlanId,
+            PremiumPackageName = activeSubscription?.Plan?.Name,
+            PremiumExpiresAt = activeSubscription?.CurrentPeriodEnd
         };
     }
 
@@ -160,15 +161,15 @@ public class AdminUserService : IAdminUserService
         var lockedUsers = await _dbContext.Users.CountAsync(u => u.Status == 0);
         
         var now = DateTime.UtcNow;
-        var vipUsers = await _dbContext.Users
+        var premiumUsers = await _dbContext.Users
             .CountAsync(u => u.Subscriptions.Any(s => s.Status == 0 && s.CurrentPeriodEnd > now));
         
-        var freeUsers = totalUsers - vipUsers - lockedUsers;
+        var freeUsers = totalUsers - premiumUsers - lockedUsers;
 
         return new AdminUserStatsDto
         {
             Total = totalUsers,
-            Vip = vipUsers,
+            Premium = premiumUsers,
             Free = freeUsers,
             Locked = lockedUsers
         };

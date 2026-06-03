@@ -8,7 +8,7 @@ public class AdminUserDto
     public DateTime CreatedAt { get; set; }
     public bool IsActive { get; set; }
     public bool IsLocked { get; set; }
-    public int? VipPackageId { get; set; }
-    public string? VipPackageName { get; set; }
-    public DateTime? VipExpiresAt { get; set; }
+    public int? PremiumPackageId { get; set; }
+    public string? PremiumPackageName { get; set; }
+    public DateTime? PremiumExpiresAt { get; set; }
 }

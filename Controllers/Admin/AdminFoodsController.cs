@@ -1,8 +1,11 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using nutrition_app_backend.Data;
 using nutrition_app_backend.DTOs;
 using nutrition_app_backend.DTOs.Admin;
 using nutrition_app_backend.DTOs.Foods;
+using nutrition_app_backend.Enums;
 using nutrition_app_backend.Extensions;
 using nutrition_app_backend.Services.Admin.Core;
 
@@ -14,10 +17,38 @@ namespace nutrition_app_backend.Controllers.Admin;
 public class AdminFoodsController : ControllerBase
 {
     private readonly IAdminCompositeService _admin;
+    private readonly WaoDbContext _db;
 
-    public AdminFoodsController(IAdminCompositeService admin)
+    public AdminFoodsController(IAdminCompositeService admin, WaoDbContext db)
     {
         _admin = admin;
+        _db = db;
+    }
+
+    [HttpGet("stats")]
+    public async Task<IActionResult> GetStats()
+    {
+        var total = await _db.FoodItems.CountAsync();
+        var visible = await _db.FoodItems.CountAsync(f => f.Status == FoodStatus.Approved);
+        var hidden = total - visible;
+        var categories = await _db.FoodCategories.CountAsync();
+        return Ok(new { success = true, data = new { total, visible, hidden, categories } });
+    }
+
+    [HttpGet("categories")]
+    public async Task<IActionResult> GetCategories()
+    {
+        var cats = await _db.FoodCategories
+            .Select(c => new
+            {
+                id = c.Id,
+                name = c.NameVi,
+                nameEn = c.NameEn,
+                foodCount = _db.FoodItems.Count(f => f.CategoryId == c.Id)
+            })
+            .OrderBy(c => c.id)
+            .ToListAsync();
+        return Ok(new { success = true, data = cats });
     }
 
     [HttpPost]

@@ -53,7 +53,8 @@ public class AdminAuthController : ControllerBase
         {
             new Claim(JwtRegisteredClaimNames.Sub, Guid.NewGuid().ToString()), // Mock Admin ID
             new Claim(JwtRegisteredClaimNames.Email, request.Email),
-            new Claim("role", "admin"), // Custom role claim if needed
+            new Claim(System.Security.Claims.ClaimTypes.Role, "Admin"), // Use ClaimTypes.Role for [Authorize(Roles)]
+            new Claim("role", "admin"), // Also include lowercase for compatibility
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 

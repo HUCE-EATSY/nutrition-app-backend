@@ -19,13 +19,13 @@ public class AdminDashboardController : ControllerBase
     public async Task<IActionResult> GetStats()
     {
         var stats = await _dashboardService.GetStatsAsync();
-        return Ok(stats);
+        return Ok(new { success = true, data = stats });
     }
 
     [HttpGet("user-growth")]
     public async Task<IActionResult> GetUserGrowth()
     {
         var growth = await _dashboardService.GetUserGrowthAsync();
-        return Ok(growth);
+        return Ok(new { success = true, data = growth });
     }
 }

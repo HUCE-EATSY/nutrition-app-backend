@@ -19,7 +19,7 @@ public class AdminExerciseService : IAdminExerciseService
         _dbContext = dbContext;
     }
 
-    public async Task<IEnumerable<AdminExerciseDto>> GetAllExercisesAsync(int page, int pageSize, string? search)
+    public async Task<IEnumerable<AdminExerciseDto>> GetAllExercisesAsync(int page, int pageSize, string? search, int? categoryId = null, string? status = null)
     {
         var query = _dbContext.Exercises.AsQueryable();
 
@@ -27,6 +27,18 @@ public class AdminExerciseService : IAdminExerciseService
         {
             var searchLower = search.ToLower();
             query = query.Where(e => e.NameVi.ToLower().Contains(searchLower) || (e.NameEn != null && e.NameEn.ToLower().Contains(searchLower)));
+        }
+
+        if (categoryId.HasValue)
+        {
+            query = query.Where(e => e.CategoryId == categoryId.Value);
+        }
+
+        if (!string.IsNullOrEmpty(status))
+        {
+            var statusInt = status.ToLower() == "visible" ? 1 : status.ToLower() == "hidden" ? 0 : -1;
+            if (statusInt >= 0)
+                query = query.Where(e => e.Status == statusInt);
         }
 
         var exercises = await query
@@ -137,5 +149,35 @@ public class AdminExerciseService : IAdminExerciseService
         
         await _dbContext.SaveChangesAsync();
         return true;
+    }
+
+    public async Task<object> GetStatsAsync()
+    {
+        var total = await _dbContext.Exercises.CountAsync();
+        var visible = await _dbContext.Exercises.CountAsync(e => e.Status == 1);
+        var categories = await _dbContext.ExerciseCategories.CountAsync();
+
+        return new
+        {
+            total,
+            visible,
+            categories
+        };
+    }
+
+    public async Task<IEnumerable<object>> GetCategoriesAsync()
+    {
+        var categories = await _dbContext.ExerciseCategories
+            .Select(c => new
+            {
+                id = c.Id,
+                name = c.NameVi,
+                nameEn = c.NameEn,
+                exerciseCount = _dbContext.Exercises.Count(e => e.CategoryId == c.Id)
+            })
+            .OrderBy(c => c.id)
+            .ToListAsync();
+
+        return categories.Cast<object>();
     }
 }
