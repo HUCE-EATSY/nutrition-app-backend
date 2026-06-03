@@ -7,9 +7,11 @@ using System;
 
 public interface IAdminExerciseService
 {
-    Task<IEnumerable<AdminExerciseDto>> GetAllExercisesAsync(int page, int pageSize, string? search);
+    Task<IEnumerable<AdminExerciseDto>> GetAllExercisesAsync(int page, int pageSize, string? search, int? categoryId = null, string? status = null);
     Task<AdminExerciseDto> CreateExerciseAsync(AdminExerciseCreateDto dto);
     Task<AdminExerciseDto?> UpdateExerciseAsync(Guid id, AdminExerciseUpdateDto dto);
     Task<bool> DeleteExerciseAsync(Guid id);
     Task<bool> ToggleVisibilityAsync(Guid id);
+    Task<object> GetStatsAsync();
+    Task<IEnumerable<object>> GetCategoriesAsync();
 }

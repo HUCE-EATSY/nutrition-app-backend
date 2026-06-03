@@ -7,8 +7,9 @@ using System;
 
 public interface IAdminUserService
 {
-    Task<IEnumerable<AdminUserDto>> GetAllUsersAsync(int page, int pageSize, string? search);
+    Task<object> GetAllUsersAsync(int page, int pageSize, string? search, string? status);
     Task<AdminUserDto?> GetUserByIdAsync(Guid id);
-    Task<bool> ToggleUserLockAsync(Guid id);
+    Task<AdminUserDto> ToggleUserLockAsync(Guid id);
+    Task DeleteUserAsync(Guid id);
     Task<AdminUserStatsDto> GetUserStatsAsync();
 }

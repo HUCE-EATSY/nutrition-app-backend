@@ -98,6 +98,7 @@ builder.Services.AddScoped<IAdminCompositeService, AdminCompositeService>();
 builder.Services.AddScoped<nutrition_app_backend.Services.Admin.IAdminDashboardService, nutrition_app_backend.Services.Admin.AdminDashboardService>();
 builder.Services.AddScoped<nutrition_app_backend.Services.Admin.IAdminUserService, nutrition_app_backend.Services.Admin.AdminUserService>();
 builder.Services.AddScoped<nutrition_app_backend.Services.Admin.IAdminExerciseService, nutrition_app_backend.Services.Admin.AdminExerciseService>();
+builder.Services.AddScoped<nutrition_app_backend.Services.Admin.IAdminSubscriptionService, nutrition_app_backend.Services.Admin.AdminSubscriptionService>();
 
 // ===== OPEN FOOD FACTS =====
 builder.Services.AddHttpClient("OpenFoodFacts", client =>

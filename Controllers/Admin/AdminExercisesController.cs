@@ -16,10 +16,29 @@ public class AdminExercisesController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAllExercises([FromQuery] int page = 1, [FromQuery] string? search = null)
+    public async Task<IActionResult> GetAllExercises(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 15,
+        [FromQuery] string? search = null,
+        [FromQuery] int? categoryId = null,
+        [FromQuery] string? status = null)
     {
-        var exercises = await _exerciseService.GetAllExercisesAsync(page, 20, search);
+        var exercises = await _exerciseService.GetAllExercisesAsync(page, pageSize, search, categoryId, status);
         return Ok(new { success = true, data = exercises });
+    }
+
+    [HttpGet("stats")]
+    public async Task<IActionResult> GetStats()
+    {
+        var stats = await _exerciseService.GetStatsAsync();
+        return Ok(new { success = true, data = stats });
+    }
+
+    [HttpGet("categories")]
+    public async Task<IActionResult> GetCategories()
+    {
+        var categories = await _exerciseService.GetCategoriesAsync();
+        return Ok(new { success = true, data = categories });
     }
 
     [HttpPost]
