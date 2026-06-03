@@ -309,7 +309,10 @@ public class FoodLogService : IFoodLogService
             OperatingSystem.IsWindows() ? "SE Asia Standard Time" : "Asia/Ho_Chi_Minh");
         DateTime todayVn = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vietnamTz).Date;
 
-        if (logDate.Date != todayVn)
+        DateTime utcLogDate = logDate.Kind == DateTimeKind.Utc ? logDate : DateTime.SpecifyKind(logDate, DateTimeKind.Utc);
+        DateTime logDateVn = TimeZoneInfo.ConvertTimeFromUtc(utcLogDate, vietnamTz).Date;
+
+        if (logDateVn != todayVn)
         {
             return;
         }

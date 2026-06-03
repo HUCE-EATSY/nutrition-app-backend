@@ -45,7 +45,8 @@ namespace nutrition_app_backend.Controllers
                 await _context.SaveChangesAsync();
             }
 
-            DateTime todayDt = DateTime.UtcNow.AddHours(7).Date;
+            TimeZoneInfo vietnamTz = TimeZoneInfo.FindSystemTimeZoneById(OperatingSystem.IsWindows() ? "SE Asia Standard Time" : "Asia/Ho_Chi_Minh");
+            DateTime todayDt = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vietnamTz).Date;
             
             bool[] weeklyProgress = new bool[7];
             int dayOfWeek = (int)todayDt.DayOfWeek;
@@ -54,11 +55,18 @@ namespace nutrition_app_backend.Controllers
             DateTime startOfWeekDt = todayDt.AddDays(-indexToday);
             DateTime endOfTodayDt = todayDt.AddDays(1);
 
-            List<TempLogGroup> logs = await _context.FoodLogs
-                .Where(f => f.UserId == userId && f.LogDate >= startOfWeekDt && f.LogDate < endOfTodayDt)
-                .GroupBy(f => f.LogDate.Date)
-                .Select(g => new TempLogGroup { LogDate = g.Key, TotalCals = g.Sum(x => x.CaloriesKcal) })
+            DateTime startOfWeekUtc = TimeZoneInfo.ConvertTimeToUtc(startOfWeekDt, vietnamTz);
+            DateTime endOfTodayUtc = TimeZoneInfo.ConvertTimeToUtc(endOfTodayDt, vietnamTz);
+
+            var rawLogs = await _context.FoodLogs
+                .Where(f => f.UserId == userId && f.LogDate >= startOfWeekUtc && f.LogDate < endOfTodayUtc)
+                .Select(f => new { f.LogDate, f.CaloriesKcal })
                 .ToListAsync();
+
+            List<TempLogGroup> logs = rawLogs
+                .GroupBy(f => TimeZoneInfo.ConvertTimeFromUtc(f.LogDate, vietnamTz).Date)
+                .Select(g => new TempLogGroup { LogDate = g.Key, TotalCals = g.Sum(x => x.CaloriesKcal) })
+                .ToList();
 
             foreach (TempLogGroup log in logs)
             {
@@ -92,7 +100,7 @@ namespace nutrition_app_backend.Controllers
                 longestStreak = streak.LongestStreak,
                 freezeCount = streak.FreezeCount,
                 weeklyProgress = weeklyProgress,
-                isLoggedToday = streak.LastLogDate.HasValue && streak.LastLogDate.Value.AddHours(7).Date == todayDt
+                isLoggedToday = streak.LastLogDate.HasValue && TimeZoneInfo.ConvertTimeFromUtc(streak.LastLogDate.Value, vietnamTz).Date == todayDt
             };
 
             return Ok(ApiResponse<object>.Success(result, "Lấy thông tin streak thành công"));
@@ -214,13 +222,12 @@ namespace nutrition_app_backend.Controllers
             TimeZoneInfo vietnamTz = TimeZoneInfo.FindSystemTimeZoneById(
                 OperatingSystem.IsWindows() ? "SE Asia Standard Time" : "Asia/Ho_Chi_Minh");
             DateTime todayVn = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vietnamTz).Date;
-            DateTime yesterdayVn = todayVn.AddDays(-1);
             
-            DateTime yesterdayStartUtc = TimeZoneInfo.ConvertTimeToUtc(yesterdayVn, vietnamTz);
-            DateTime yesterdayEndUtc = TimeZoneInfo.ConvertTimeToUtc(todayVn, vietnamTz);
+            DateTime todayStartUtc = TimeZoneInfo.ConvertTimeToUtc(todayVn, vietnamTz);
+            DateTime todayEndUtc = TimeZoneInfo.ConvertTimeToUtc(todayVn.AddDays(1), vietnamTz);
 
             List<FoodLog> existingLogs = await _context.FoodLogs
-                .Where(f => f.UserId == userId && f.LogDate >= yesterdayStartUtc && f.LogDate < yesterdayEndUtc)
+                .Where(f => f.UserId == userId && f.LogDate >= todayStartUtc && f.LogDate < todayEndUtc)
                 .ToListAsync();
             _context.FoodLogs.RemoveRange(existingLogs);
 
@@ -229,7 +236,7 @@ namespace nutrition_app_backend.Controllers
                 UserId = userId,
                 FoodItemId = foodItem.Id,
                 MealTypeId = 1, // Breakfast
-                LogDate = yesterdayStartUtc, // Save as UTC midnight of yesterday local
+                LogDate = todayStartUtc, // Save as UTC midnight of today local
                 QuantityG = (targetKcal / 500m) * 100m + 10m,
                 CaloriesKcal = targetKcal + 100m,
                 ProteinG = 30m,
@@ -239,18 +246,36 @@ namespace nutrition_app_backend.Controllers
 
             _context.FoodLogs.Add(log);
 
-            // Instant Evaluation for yesterday
+            // Instant Evaluation for today
             if (log.CaloriesKcal >= targetKcal)
             {
-                bool isLoggedYesterday = streak.LastLogDate.HasValue && TimeZoneInfo.ConvertTimeFromUtc(streak.LastLogDate.Value, vietnamTz).Date >= yesterdayVn;
-                if (!isLoggedYesterday)
+                bool isLoggedToday = streak.LastLogDate.HasValue && TimeZoneInfo.ConvertTimeFromUtc(streak.LastLogDate.Value, vietnamTz).Date >= todayVn;
+                if (!isLoggedToday)
                 {
-                    streak.CurrentStreak += 1;
+                    // Check if yesterday was logged OR frozen
+                    DateTime yesterdayVn = todayVn.AddDays(-1);
+                    DateTime yesterdayStartUtc = TimeZoneInfo.ConvertTimeToUtc(yesterdayVn, vietnamTz);
+                    DateTime yesterdayEndUtc = todayStartUtc;
+
+                    bool loggedYesterday = await _context.FoodLogs
+                        .AnyAsync(f => f.UserId == userId && f.LogDate >= yesterdayStartUtc && f.LogDate < yesterdayEndUtc);
+                    bool frozenYesterday = await _context.StreakFreezeTransactions
+                        .AnyAsync(f => f.UserId == userId && f.FreezeDate.Date == yesterdayVn);
+
+                    if (loggedYesterday || frozenYesterday || streak.CurrentStreak == 0)
+                    {
+                        streak.CurrentStreak += 1;
+                    }
+                    else
+                    {
+                        streak.CurrentStreak = 1;
+                    }
+
                     if (streak.CurrentStreak > streak.LongestStreak)
                     {
                         streak.LongestStreak = streak.CurrentStreak;
                     }
-                    streak.LastLogDate = yesterdayStartUtc; // Set LastLogDate to yesterday to allow logging today
+                    streak.LastLogDate = DateTime.UtcNow;
                 }
             }
 
