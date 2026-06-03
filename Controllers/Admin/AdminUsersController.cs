@@ -41,6 +41,13 @@ public class AdminUsersController : ControllerBase
         return Ok(new { success = true, data = result });
     }
 
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteUser(Guid id)
+    {
+        await _userService.DeleteUserAsync(id);
+        return Ok(new { success = true, message = "User deleted successfully" });
+    }
+
     [HttpGet("stats")]
     public async Task<IActionResult> GetStats()
     {

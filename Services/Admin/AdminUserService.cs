@@ -21,6 +21,7 @@ public class AdminUserService : IAdminUserService
     public async Task<object> GetAllUsersAsync(int page, int pageSize, string? search, string? status)
     {
         var query = _dbContext.Users
+            .Where(u => u.DeletedAt == null)
             .Include(u => u.Profile)
             .Include(u => u.Subscriptions.Where(s => s.Status == 0 && s.CurrentPeriodEnd > DateTime.UtcNow))
             .ThenInclude(s => s.Plan)
@@ -155,14 +156,25 @@ public class AdminUserService : IAdminUserService
         };
     }
 
+    public async Task DeleteUserAsync(Guid id)
+    {
+        var user = await _dbContext.Users.FindAsync(id);
+        if (user == null) throw new NotFoundException("User not found.");
+
+        user.DeletedAt = DateTime.UtcNow;
+        user.Status = 0; // Lock the user as well
+        
+        await _dbContext.SaveChangesAsync();
+    }
+
     public async Task<AdminUserStatsDto> GetUserStatsAsync()
     {
-        var totalUsers = await _dbContext.Users.CountAsync();
-        var lockedUsers = await _dbContext.Users.CountAsync(u => u.Status == 0);
+        var totalUsers = await _dbContext.Users.CountAsync(u => u.DeletedAt == null);
+        var lockedUsers = await _dbContext.Users.CountAsync(u => u.Status == 0 && u.DeletedAt == null);
         
         var now = DateTime.UtcNow;
         var premiumUsers = await _dbContext.Users
-            .CountAsync(u => u.Subscriptions.Any(s => s.Status == 0 && s.CurrentPeriodEnd > now));
+            .CountAsync(u => u.DeletedAt == null && u.Subscriptions.Any(s => s.Status == 0 && s.CurrentPeriodEnd > now));
         
         var freeUsers = totalUsers - premiumUsers - lockedUsers;
 
