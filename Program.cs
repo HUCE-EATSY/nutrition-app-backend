@@ -85,7 +85,6 @@ builder.Services.AddScoped<IWeightLogService, WeightLogService>();
 builder.Services.AddScoped<IStorageService, CloudinaryStorageService>();
 builder.Services.AddScoped<IExerciseService, ExerciseService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
-builder.Services.AddScoped<IMenuService, MenuService>();
 builder.Services.AddScoped<IStreakService, StreakService>();
 
 builder.Services.AddScoped<IStepLogService, StepLogService>();

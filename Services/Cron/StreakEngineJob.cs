@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Configuration;
 using nutrition_app_backend.Data;
 using nutrition_app_backend.Models.Users;
 using System;
@@ -16,15 +17,13 @@ namespace nutrition_app_backend.Services.Cron
     {
         private readonly ILogger<StreakEngineJob> _logger;
         private readonly IServiceProvider _serviceProvider;
+        private readonly IConfiguration _configuration;
 
-        // Vietnam timezone (UTC+7)
-        private static readonly TimeZoneInfo VietnamTz = TimeZoneInfo.FindSystemTimeZoneById(
-            OperatingSystem.IsWindows() ? "SE Asia Standard Time" : "Asia/Ho_Chi_Minh");
-
-        public StreakEngineJob(ILogger<StreakEngineJob> logger, IServiceProvider serviceProvider)
+        public StreakEngineJob(ILogger<StreakEngineJob> logger, IServiceProvider serviceProvider, IConfiguration configuration)
         {
             _logger = logger;
             _serviceProvider = serviceProvider;
+            _configuration = configuration;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -33,29 +32,33 @@ namespace nutrition_app_backend.Services.Cron
 
             while (!stoppingToken.IsCancellationRequested)
             {
-                // Calculate next 23:59 in Vietnam time
-                var nowUtc = DateTime.UtcNow;
-                var nowVn = TimeZoneInfo.ConvertTimeFromUtc(nowUtc, VietnamTz);
+                int intervalMinutes = _configuration.GetValue<int?>("StreakCronIntervalMinutes") ?? 0;
+                TimeSpan delay;
 
-                // Target: 23:59:00 today (VN time)
-                var targetVn = nowVn.Date.AddHours(23).AddMinutes(59);
-
-                // If we're already past 23:59 today, schedule for tomorrow
-                if (nowVn >= targetVn)
-                    targetVn = targetVn.AddDays(1);
-
-                // Convert target back to UTC for delay calculation
-                var targetUtc = TimeZoneInfo.ConvertTimeToUtc(targetVn, VietnamTz);
-                var delay = targetUtc - nowUtc;
-
-                _logger.LogInformation("Next streak processing at {vnTime} (VN) / {utcTime} (UTC)", targetVn, targetUtc);
+                if (intervalMinutes > 0)
+                {
+                    delay = TimeSpan.FromMinutes(intervalMinutes);
+                    _logger.LogInformation("Streak processing interval configured to {minutes} minutes.", intervalMinutes);
+                }
+                else
+                {
+                    DateTime now = DateTime.UtcNow;
+                    // Run at 23:59 UTC
+                    DateTime nextRun = now.Date.AddHours(23).AddMinutes(59);
+                    if (now >= nextRun)
+                    {
+                        nextRun = nextRun.AddDays(1);
+                    }
+                    delay = nextRun - now;
+                    _logger.LogInformation("Next streak processing at {time}", nextRun);
+                }
 
                 await Task.Delay(delay, stoppingToken);
 
                 if (stoppingToken.IsCancellationRequested)
                     break;
 
-                _logger.LogInformation("Processing daily streaks at {vnTime} (VN)", TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, VietnamTz));
+                _logger.LogInformation("Processing daily streaks at {time}", DateTime.UtcNow);
 
                 try
                 {
@@ -74,7 +77,7 @@ namespace nutrition_app_backend.Services.Cron
             {
                 WaoDbContext context = scope.ServiceProvider.GetRequiredService<WaoDbContext>();
 
-                TimeZoneInfo vietnamTz = TimeZoneInfo.FindSystemTimeZoneById(
+                                TimeZoneInfo vietnamTz = TimeZoneInfo.FindSystemTimeZoneById(
                     OperatingSystem.IsWindows() ? "SE Asia Standard Time" : "Asia/Ho_Chi_Minh");
                 DateTime todayVn = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vietnamTz).Date;
                 DateTime yesterdayVn = todayVn.AddDays(-1);

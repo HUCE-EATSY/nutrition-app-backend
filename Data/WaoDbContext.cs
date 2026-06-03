@@ -33,14 +33,17 @@ public class WaoDbContext : DbContext
     public DbSet<FoodItemImage> FoodItemImages { get; set; } = null!;
     public DbSet<FoodNutrition> FoodNutritions { get; set; } = null!;
     public DbSet<FoodItemComponent> FoodItemComponents { get; set; } = null!;
-    public DbSet<Menu> Menus { get; set; } = null!;
-    public DbSet<MenuFood> MenuFoods { get; set; } = null!;
 
     // Logging Group
     public DbSet<MealType> MealTypes { get; set; } = null!;
     public DbSet<FoodLog> FoodLogs { get; set; } = null!;
     public DbSet<StepLog> StepLogs { get; set; } = null!;
     public DbSet<UserHealthConnection> UserHealthConnections { get; set; } = null!;
+
+    // Menus & Daily Plans Group
+    public DbSet<Menu> Menus { get; set; } = null!;
+    public DbSet<MenuFood> MenuFoods { get; set; } = null!;
+    public DbSet<DailyPlan> DailyPlans { get; set; } = null!;
 
     // Exercise Group
     public DbSet<ExerciseCategory> ExerciseCategories { get; set; } = null!;
@@ -247,44 +250,6 @@ public class WaoDbContext : DbContext
         });
 
         // --- GROUP 2: FOOD DATABASE ---
-        modelBuilder.Entity<Menu>(entity =>
-        {
-            entity.ToTable("menus");
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.Id).HasColumnType("CHAR(36)");
-            entity.Property(e => e.UserId).HasColumnType("CHAR(36)");
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
-            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)");
-            
-            entity.HasIndex(e => e.UserId).HasDatabaseName("idx_menu_user");
-
-            entity.HasOne(d => d.User)
-                  .WithMany(p => p.Menus)
-                  .HasForeignKey(d => d.UserId)
-                  .OnDelete(DeleteBehavior.Cascade);
-        });
-
-        modelBuilder.Entity<MenuFood>(entity =>
-        {
-            entity.ToTable("menu_foods");
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.Id).HasColumnType("CHAR(36)");
-            entity.Property(e => e.MenuId).HasColumnType("CHAR(36)");
-            entity.Property(e => e.FoodItemId).HasColumnType("CHAR(36)");
-
-            entity.HasIndex(e => new { e.MenuId, e.FoodItemId }).IsUnique();
-
-            entity.HasOne(d => d.Menu)
-                  .WithMany(p => p.MenuFoods)
-                  .HasForeignKey(d => d.MenuId)
-                  .OnDelete(DeleteBehavior.Cascade);
-
-            entity.HasOne(d => d.FoodItem)
-                  .WithMany(p => p.MenuFoods)
-                  .HasForeignKey(d => d.FoodItemId)
-                  .OnDelete(DeleteBehavior.Restrict);
-        });
-
         modelBuilder.Entity<FoodCategory>(entity =>
         {
             entity.ToTable("food_categories");
@@ -620,6 +585,76 @@ public class WaoDbContext : DbContext
             new SubscriptionPlan { Id = 2, Code = "MONTHLY_PREMIUM", Name = "Premium 1 Tháng", Price = 59000, DurationDays = 30, CreatedAt = new DateTime(2024,1,1,0,0,0,DateTimeKind.Utc), UpdatedAt = new DateTime(2024,1,1,0,0,0,DateTimeKind.Utc) },
             new SubscriptionPlan { Id = 3, Code = "YEARLY_PREMIUM", Name = "Premium 1 Năm", Price = 499000, DurationDays = 365, CreatedAt = new DateTime(2024,1,1,0,0,0,DateTimeKind.Utc), UpdatedAt = new DateTime(2024,1,1,0,0,0,DateTimeKind.Utc) }
         );
+
+        modelBuilder.Entity<Menu>(entity =>
+        {
+            entity.ToTable("menus");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnType("CHAR(36)");
+            entity.Property(e => e.UserId).HasColumnType("CHAR(36)");
+            entity.Property(e => e.TotalCalories).HasPrecision(18, 2);
+            entity.Property(e => e.TotalProtein).HasPrecision(18, 2);
+            entity.Property(e => e.TotalCarbs).HasPrecision(18, 2);
+            entity.Property(e => e.TotalFat).HasPrecision(18, 2);
+
+            entity.HasOne(d => d.User)
+                  .WithMany()
+                  .HasForeignKey(d => d.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<MenuFood>(entity =>
+        {
+            entity.ToTable("menu_foods");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnType("CHAR(36)");
+            entity.Property(e => e.MenuId).HasColumnType("CHAR(36)");
+            entity.Property(e => e.FoodItemId).HasColumnType("CHAR(36)");
+            entity.Property(e => e.QuantityG).HasPrecision(8, 2);
+
+            entity.HasOne(d => d.Menu)
+                  .WithMany(p => p.MenuFoods)
+                  .HasForeignKey(d => d.MenuId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(d => d.FoodItem)
+                  .WithMany()
+                  .HasForeignKey(d => d.FoodItemId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(d => d.MealType)
+                  .WithMany()
+                  .HasForeignKey(d => d.MealTypeId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<DailyPlan>(entity =>
+        {
+            entity.ToTable("daily_plans");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnType("CHAR(36)");
+            entity.Property(e => e.UserId).HasColumnType("CHAR(36)");
+            entity.Property(e => e.FoodItemId).HasColumnType("CHAR(36)");
+            entity.Property(e => e.QuantityG).HasPrecision(8, 2);
+
+            entity.HasIndex(e => new { e.UserId, e.LogDate })
+                  .HasDatabaseName("idx_daily_plan_user_date");
+
+            entity.HasOne(d => d.User)
+                  .WithMany()
+                  .HasForeignKey(d => d.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(d => d.FoodItem)
+                  .WithMany()
+                  .HasForeignKey(d => d.FoodItemId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(d => d.MealType)
+                  .WithMany()
+                  .HasForeignKey(d => d.MealTypeId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
     }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
