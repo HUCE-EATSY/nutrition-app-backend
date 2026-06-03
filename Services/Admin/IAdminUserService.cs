@@ -1,0 +1,15 @@
+namespace nutrition_app_backend.Services.Admin;
+
+using nutrition_app_backend.DTOs.Admin;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using System;
+
+public interface IAdminUserService
+{
+    Task<object> GetAllUsersAsync(int page, int pageSize, string? search, string? status);
+    Task<AdminUserDto?> GetUserByIdAsync(Guid id);
+    Task<AdminUserDto> ToggleUserLockAsync(Guid id);
+    Task DeleteUserAsync(Guid id);
+    Task<AdminUserStatsDto> GetUserStatsAsync();
+}

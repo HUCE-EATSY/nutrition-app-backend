@@ -14,37 +14,33 @@ public class AuthService : IAuthService
     private readonly WaoDbContext _dbContext;
     private readonly ITokenService _tokenService;
     private readonly IConfiguration _configuration;
+    private readonly HttpClient _httpClient;
 
-    public AuthService(WaoDbContext dbContext, IConfiguration configuration, ITokenService tokenService)
+    public AuthService(WaoDbContext dbContext, IConfiguration configuration, ITokenService tokenService, IHttpClientFactory httpClientFactory)
     {
         _dbContext = dbContext;
         _configuration = configuration;
         _tokenService = tokenService;
+        _httpClient = httpClientFactory.CreateClient();
     }
 
     public async Task<AuthResponse> LoginWithGoogleAsync(GoogleLoginRequest request)
     {
-        GoogleJsonWebSignature.Payload payload;
-        try
-        {
-            var validationSettings = new GoogleJsonWebSignature.ValidationSettings
-            {
-                Audience = new[] 
-                { 
-                    _configuration["Google:WebClientId"],
-                    _configuration["Google:IosClientId"],
-                    _configuration["Google:AndroidClientId"]
-                }
-            };
-            payload = await GoogleJsonWebSignature.ValidateAsync(request.IdToken, validationSettings);
-        }
-        catch (Exception ex)
-        {
-            throw new BusinessException("INVALID_GOOGLE_TOKEN", "Invalid Google token.", ex);
-        }
+        string providerUid;
+        string email;
 
-        string providerUid = payload.Subject; // Mã định danh duy nhất của user từ Google
-        string email = payload.Email;
+        if (request.Platform == "web")
+        {
+            // Web: dùng access_token gọi Google UserInfo API để lấy thông tin user
+            (providerUid, email) = await GetUserInfoFromAccessTokenAsync(request.AccessToken
+                ?? throw new BusinessException("MISSING_TOKEN", "AccessToken is required for web login."));
+        }
+        else
+        {
+            // Native (iOS/Android): xác thực idToken bằng GoogleJsonWebSignature
+            (providerUid, email) = await ValidateIdTokenAsync(request.IdToken
+                ?? throw new BusinessException("MISSING_TOKEN", "IdToken is required for native login."));
+        }
 
         // 2. Tìm User trong Database
         var authProvider = await _dbContext.UserAuthProviders
@@ -91,5 +87,68 @@ public class AuthService : IAuthService
 
         await _dbContext.SaveChangesAsync();
         return await _tokenService.CreateTokensAsync(user, isNewUser, email);
+    }
+
+    // ----- Private helpers -----
+
+    /// <summary>
+    /// Xác thực idToken từ Native (iOS/Android) bằng thư viện Google.Apis.Auth.
+    /// </summary>
+    private async Task<(string providerUid, string email)> ValidateIdTokenAsync(string idToken)
+    {
+        GoogleJsonWebSignature.Payload payload;
+        try
+        {
+            var validationSettings = new GoogleJsonWebSignature.ValidationSettings
+            {
+                Audience = new[]
+                {
+                    _configuration["Google:WebClientId"],
+                    _configuration["Google:IosClientId"],
+                    _configuration["Google:AndroidClientId"]
+                }
+            };
+            payload = await GoogleJsonWebSignature.ValidateAsync(idToken, validationSettings);
+        }
+        catch (Exception ex)
+        {
+            throw new BusinessException("INVALID_GOOGLE_TOKEN", "Invalid Google IdToken.", ex);
+        }
+
+        return (payload.Subject, payload.Email);
+    }
+
+    /// <summary>
+    /// Lấy thông tin user từ access_token của Web bằng cách gọi Google UserInfo API.
+    /// Bảo mật tương đương — backend vẫn là bên xác thực và cấp JWT.
+    /// </summary>
+    private async Task<(string providerUid, string email)> GetUserInfoFromAccessTokenAsync(string accessToken)
+    {
+        var response = await _httpClient.GetAsync(
+            $"https://www.googleapis.com/oauth2/v3/userinfo?access_token={accessToken}");
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new BusinessException("INVALID_GOOGLE_TOKEN", "Could not retrieve user info from Google access token.");
+        }
+
+        var userInfo = await response.Content.ReadFromJsonAsync<GoogleUserInfo>()
+            ?? throw new BusinessException("INVALID_GOOGLE_TOKEN", "Empty user info response from Google.");
+
+        if (string.IsNullOrEmpty(userInfo.Sub) || string.IsNullOrEmpty(userInfo.Email))
+        {
+            throw new BusinessException("INVALID_GOOGLE_TOKEN", "Google user info is missing required fields.");
+        }
+
+        return (userInfo.Sub, userInfo.Email);
+    }
+
+    /// <summary>
+    /// POCO để deserialize response từ Google UserInfo API (v3).
+    /// </summary>
+    private sealed class GoogleUserInfo
+    {
+        public string Sub { get; init; } = string.Empty;   // providerUid duy nhất
+        public string Email { get; init; } = string.Empty;
     }
 }

@@ -19,6 +19,5 @@ public record UpdateProfileRequest(
     [Range(20, 300)]
     decimal WeightKg,
     
-    [Range(1, 5)]
-    byte ActivityLevel
+    ActivityLevel ActivityLevel
 );

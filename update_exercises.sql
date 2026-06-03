@@ -1,0 +1,14 @@
+UPDATE exercises SET IconUrl = 'https://res.cloudinary.com/drsgmoufr/image/upload/v1779732742/chay_bo_i0xdol.jpg' WHERE NameVi = 'Chạy bộ' AND IconUrl IS NULL;
+UPDATE exercises SET IconUrl = 'https://res.cloudinary.com/drsgmoufr/image/upload/v1779732742/di_bo_zttbcb.jpg' WHERE NameVi = 'Đi bộ' AND IconUrl IS NULL;
+UPDATE exercises SET IconUrl = 'https://res.cloudinary.com/drsgmoufr/image/upload/v1779732742/dap_xe_ydjkou.jpg' WHERE NameVi = 'Đạp xe' AND IconUrl IS NULL;
+UPDATE exercises SET IconUrl = 'https://res.cloudinary.com/drsgmoufr/image/upload/v1779732740/boi_loi_ia9sol.jpg' WHERE NameVi = 'Bơi lội' AND IconUrl IS NULL;
+UPDATE exercises SET IconUrl = 'https://res.cloudinary.com/drsgmoufr/image/upload/v1779732743/nhay_day_deaept.jpg' WHERE NameVi = 'Nhảy dây' AND IconUrl IS NULL;
+UPDATE exercises SET IconUrl = 'https://res.cloudinary.com/drsgmoufr/image/upload/v1779732743/nang_ta_miloiy.jpg' WHERE (NameVi = 'Tập tạ' OR NameVi = 'Nâng tạ') AND IconUrl IS NULL;
+UPDATE exercises SET IconUrl = 'https://res.cloudinary.com/drsgmoufr/image/upload/v1779732742/hit_dat_elcd4c.jpg' WHERE NameVi = 'Hít đất' AND IconUrl IS NULL;
+UPDATE exercises SET IconUrl = 'https://res.cloudinary.com/drsgmoufr/image/upload/v1779732742/gap_bung_g2js1l.jpg' WHERE NameVi = 'Gập bụng' AND IconUrl IS NULL;
+UPDATE exercises SET IconUrl = 'https://res.cloudinary.com/drsgmoufr/image/upload/v1779732742/yoga_bitlo9.jpg' WHERE NameVi = 'Yoga' AND IconUrl IS NULL;
+UPDATE exercises SET IconUrl = 'https://res.cloudinary.com/drsgmoufr/image/upload/v1779732740/plank_k0rbjk.jpg' WHERE NameVi = 'Plank' AND IconUrl IS NULL;
+UPDATE exercises SET IconUrl = 'https://res.cloudinary.com/drsgmoufr/image/upload/v1779732741/bong_da_pcibi3.jpg' WHERE NameVi = 'Bóng đá' AND IconUrl IS NULL;
+UPDATE exercises SET IconUrl = 'https://res.cloudinary.com/drsgmoufr/image/upload/v1779732742/cau_long_sxihz6.jpg' WHERE NameVi = 'Cầu lông' AND IconUrl IS NULL;
+UPDATE exercises SET IconUrl = 'https://res.cloudinary.com/drsgmoufr/image/upload/v1779732741/bong_ro_zmldle.jpg' WHERE NameVi = 'Bóng rổ' AND IconUrl IS NULL;
+UPDATE exercises SET IconUrl = 'https://res.cloudinary.com/drsgmoufr/image/upload/v1779732740/pickle_ball_ciqj11.jpg' WHERE NameVi = 'Pickleball' AND IconUrl IS NULL;

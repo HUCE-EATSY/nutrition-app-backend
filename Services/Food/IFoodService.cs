@@ -6,6 +6,7 @@ public interface IFoodService
 {
     Task<CursorPaginatedResponse<FoodSearchResponse>> GetListAsync(FoodListRequest request, Guid? currentUserId);
     Task<PaginatedResponse<FoodSearchResponse>> SearchAsync(FoodSearchRequest request, Guid? currentUserId);
+    Task<PaginatedResponse<FoodSearchResponse>> GetAllAsync(int page, int pageSize, byte? categoryId);
     Task<FoodDetailResponse> GetByIdAsync(Guid id);
     Task<List<FoodComponentResponse>> GetComponentsAsync(Guid foodItemId);
     Task<FoodDetailResponse?> GetByBarcodeAsync(string barcode);
