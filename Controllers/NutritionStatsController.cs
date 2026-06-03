@@ -279,7 +279,7 @@ namespace nutrition_app_backend.Controllers
 
             // Lấy exercise logs (calories burned)
             var exerciseLogs = await _context.ExerciseLogs
-                .Where(l => l.UserId == userId && l.LogDate >= startDt && l.LogDate <= endDt)
+                .Where(l => l.UserId == userId && l.LogDate >= from && l.LogDate <= to)
                 .ToListAsync();
 
             var activeGoal = await _context.UserGoals
@@ -302,17 +302,17 @@ namespace nutrition_app_backend.Controllers
                     .Sum(l => l.CaloriesBurnedKcal);
 
                 decimal calsFromExercise = exerciseLogs
-                    .Where(l => l.LogDate >= dayStart && l.LogDate < dayEnd)
+                    .Where(l => l.LogDate == d)
                     .Sum(l => l.CaloriesBurned);
 
-                decimal totalOut = baseTdee + calsFromSteps + calsFromExercise;
-                decimal netBalance = calsIn - totalOut;
+                decimal dayTotalOut = baseTdee + calsFromSteps + calsFromExercise;
+                decimal netBalance = calsIn - dayTotalOut;
 
                 dailyBalance.Add(new
                 {
                     date = d.ToString("yyyy-MM-dd"),
                     caloriesIn = Math.Round(calsIn, 1),
-                    caloriesOut = Math.Round(totalOut, 1),
+                    caloriesOut = Math.Round(dayTotalOut, 1),
                     netBalance = Math.Round(netBalance, 1),
                     isDeficit = netBalance < 0,
                     breakdown = new
